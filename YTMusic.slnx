@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="App/App.csproj" />
+    <Project Path="Cache/Cache.csproj" />
+    <Project Path="Core/Core.csproj" />
+    <Project Path="InnerTube/InnerTube.csproj" />
+    <Project Path="Player/Player.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="Tests/Tests.csproj" />
+  </Folder>
+</Solution>
