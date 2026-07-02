@@ -1,7 +1,5 @@
 using Sori.Core.Models;
 
-namespace Sori.Core.Interfaces;
-
 public sealed class SearchResponse
 {
     public IReadOnlyList<Song> Songs { get; init; } = [];
@@ -9,5 +7,5 @@ public sealed class SearchResponse
     public IReadOnlyList<Artist> Artists { get; init; } = [];
     public IReadOnlyList<Playlist> Playlists { get; init; } = [];
     
-    public bool isEmpty => Songs.Count == 0 && Albums.Count == 0 && Artists.Count == 0 && Playlists.Count == 0;
+    public bool IsEmpty => Songs.Count == 0 && Albums.Count == 0 && Artists.Count == 0 && Playlists.Count == 0;
 }

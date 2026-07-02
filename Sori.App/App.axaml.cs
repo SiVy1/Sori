@@ -20,8 +20,9 @@ public partial class App : Application
         {
             ISearchService searchService = new MockMusicClient();
             IPlaybackService playbackService = new MockPlaybackService();
+            IQueueService queueService = new QueueService();
 
-            var viewModel = new MainWindowViewModel(searchService, playbackService);
+            var viewModel = new MainWindowViewModel(searchService, playbackService, queueService);
             desktop.MainWindow = new MainWindow { DataContext = viewModel };
         }
 

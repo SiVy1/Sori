@@ -36,9 +36,16 @@ public partial class MainWindowViewModel : ObservableObject
     public IAsyncRelayCommand SearchCommand { get; }
 
     public IRelayCommand PlaySelectedCommand { get; }
+    
+    public IAsyncRelayCommand PauseCommand { get; }
+    public IAsyncRelayCommand StopCommand { get; }
+    public IAsyncRelayCommand NextCommand { get; }
+    public IAsyncRelayCommand PreviousCommand { get; }
+    public IAsyncRelayCommand ResumeCommand {get; }
+    
     public IAsyncRelayCommand<Song> PlaySongCommand { get; }
 
-    public MainWindowViewModel(ISearchService searchService, IPlaybackService playbackService)
+    public MainWindowViewModel(ISearchService searchService, IPlaybackService playbackService, IQueueService queueService)
     {
         _searchService = searchService;
         _playbackService = playbackService;
@@ -71,7 +78,7 @@ public partial class MainWindowViewModel : ObservableObject
                 SearchResults.Add(song);
             }
 
-            SearchState = response.isEmpty ? SearchState.Empty : SearchState.Results;
+            SearchState = response.IsEmpty ? SearchState.Empty : SearchState.Results;
         }
         catch (Exception ex)
         {
