@@ -2,7 +2,7 @@
 
 namespace Sori.Core.Interfaces;
 
-public class MusicClient
+public interface IMusicClient
 {
     public Task<IReadOnlyList<Song>> SearchSongsAsync(string query, CancellationToken cancellationToken = default)
     {

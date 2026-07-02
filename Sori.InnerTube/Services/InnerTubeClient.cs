@@ -6,7 +6,7 @@ using Sori.Core.Models;
 
 namespace InnerTube.Services
 {
-    public class InnerTubeClient : MusicClient
+    public class InnerTubeClient : IMusicClient
     {
         public Task<IReadOnlyList<Song>> SearchAsync(string query)
         {
