@@ -1,7 +1,9 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Sori.Core.Enums;
 using Sori.Core.Interfaces;
 using Sori.Core.Models;
 
@@ -16,6 +18,12 @@ public partial class MainWindowViewModel : ObservableObject
     private string searchQuery = "";
 
     [ObservableProperty]
+    private SearchState searchState = SearchState.Idle;
+
+    [ObservableProperty] 
+    private string? searchError;
+        
+    [ObservableProperty]
     private Song? selectedSong;
 
     [ObservableProperty]
@@ -28,7 +36,7 @@ public partial class MainWindowViewModel : ObservableObject
     public IAsyncRelayCommand SearchCommand { get; }
 
     public IRelayCommand PlaySelectedCommand { get; }
-    public IRelayCommand<Song> PlaySongCommand { get; }
+    public IAsyncRelayCommand<Song> PlaySongCommand { get; }
 
     public MainWindowViewModel(ISearchService searchService, IPlaybackService playbackService)
     {
@@ -37,12 +45,12 @@ public partial class MainWindowViewModel : ObservableObject
 
         SearchCommand = new AsyncRelayCommand(SearchAsync);
         
-        PlaySelectedCommand = new RelayCommand(
+        PlaySelectedCommand = new AsyncRelayCommand(
             PlaySelected,
             () => SelectedSong is not null
         );
         
-        PlaySongCommand = new RelayCommand<Song>(PlaySong);
+        PlaySongCommand = new AsyncRelayCommand<Song>(PlaySongAsync);
     }
 
     partial void OnSelectedSongChanged(Song? value)
@@ -53,28 +61,38 @@ public partial class MainWindowViewModel : ObservableObject
     private async Task SearchAsync()
     {
         SearchResults.Clear();
-
-        var response = await _searchService.SearchAsync(SearchQuery);
-
-        foreach (var song in response.Songs)
+        SearchError = null;
+        SearchState = SearchState.Loading;
+        try
         {
-            SearchResults.Add(song);
+            var response = await _searchService.SearchAsync(SearchQuery);
+            foreach (var song in response.Songs)
+            {
+                SearchResults.Add(song);
+            }
+
+            SearchState = response.isEmpty ? SearchState.Empty : SearchState.Results;
+        }
+        catch (Exception ex)
+        {
+            SearchError = ex.Message;
+            SearchState = SearchState.Error;
         }
     }
 
-    private void PlaySelected()
+    private Task PlaySelected()
     {
-        PlaySong(SelectedSong);
+        return PlaySongAsync(SelectedSong);
     }
     
-    private void PlaySong(Song? song)
+    private async Task PlaySongAsync(Song? song)
     {
         if (song is null)
         {
             return;
         }
 
-        _playbackService.PlayAsync(song);
+        await _playbackService.PlayAsync(song);
         CurrentSong = _playbackService.CurrentSong;
 
         if (!Queue.Contains(song))

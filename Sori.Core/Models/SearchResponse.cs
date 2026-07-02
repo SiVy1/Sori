@@ -8,4 +8,6 @@ public sealed class SearchResponse
     public IReadOnlyList<Album> Albums { get; init; } = [];
     public IReadOnlyList<Artist> Artists { get; init; } = [];
     public IReadOnlyList<Playlist> Playlists { get; init; } = [];
+    
+    public bool isEmpty => Songs.Count == 0 && Albums.Count == 0 && Artists.Count == 0 && Playlists.Count == 0;
 }
