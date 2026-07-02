@@ -1,11 +1,11 @@
 ﻿namespace Sori.Core.Models;
 
-public class Song
+public sealed class Song
 {
-    public string Id { get; set; } = "";
-    public string Title { get; set; } = "";
-    public string Artist { get; set; } = "";
-    public string Album { get; set; } = "";
-    public TimeSpan Duration { get; set; }
-    public string Thumbnail { get; set; } = "";
+    public string Id { get; init; } = "";
+    public string Title { get; init; } = "";
+    public string ArtistName { get; init; } = "";
+    public string? AlbumTitle { get; init; }
+    public TimeSpan? Duration { get; init; }
+    public string? ThumbnailUrl { get; init; }
 }

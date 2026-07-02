@@ -173,13 +173,13 @@
                                                FontSize="15"
                                                FontWeight="SemiBold"/>
 
-                                    <TextBlock Text="{Binding Artist}"
+                                    <TextBlock Text="{Binding ArtistName}"
                                                Foreground="#9A9AA0"
                                                FontSize="13"/>
                                 </StackPanel>
 
                                 <TextBlock Grid.Column="2"
-                                           Text="{Binding Album}"
+                                           Text="{Binding AlbumTitle}"
                                            Foreground="#77777D"
                                            FontSize="13"
                                            VerticalAlignment="Center"/>
@@ -228,7 +228,7 @@
                                                Foreground="#F2F2F2"
                                                FontSize="14"/>
 
-                                    <TextBlock Text="{Binding Artist}"
+                                    <TextBlock Text="{Binding ArtistName}"
                                                Foreground="#8E8E95"
                                                FontSize="12"/>
                                 </StackPanel>
@@ -271,7 +271,7 @@
                                    FontSize="14"
                                    FontWeight="SemiBold"/>
 
-                        <TextBlock Text="{Binding CurrentSong.Artist}"
+                        <TextBlock Text="{Binding CurrentSong.ArtistName}"
                                    Foreground="#8E8E95"
                                    FontSize="12"/>
                     </StackPanel>

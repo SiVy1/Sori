@@ -1,17 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using Sori.Core.Interfaces;
 using Sori.Core.Models;
 
-namespace InnerTube.Services
-{
-    public class InnerTubeClient : IMusicClient
-    {
-        public Task<IReadOnlyList<Song>> SearchAsync(string query)
-        {
-            throw new NotImplementedException();
-        }
-    }
+namespace InnerTube.Services;
 
+public class InnerTubeClient : ISearchService
+{
+    public Task<SearchResponse> SearchAsync(string query, CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
+    }
 }

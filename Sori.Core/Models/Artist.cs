@@ -1,8 +1,8 @@
 ﻿namespace Sori.Core.Models;
 
-public class Artist
+public sealed class Artist
 {
-    public string Id { get; set; }
-    public string Name { get; set; } = "";
-    public string Thumbnail { get; set; } = "";    
+    public string Id { get; init; } = "";
+    public string Name { get; init; } = "";
+    public string? ThumbnailUrl { get; init; }
 }

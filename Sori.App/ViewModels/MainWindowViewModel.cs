@@ -1,6 +1,5 @@
 ﻿using System.Collections.ObjectModel;
 using System.Threading.Tasks;
-using App.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Sori.Core.Interfaces;
@@ -10,7 +9,8 @@ namespace App.ViewModels;
 
 public partial class MainWindowViewModel : ObservableObject
 {
-    private readonly IMusicClient _musicClient;
+    private readonly ISearchService _searchService;
+    private readonly IPlaybackService _playbackService;
 
     [ObservableProperty]
     private string searchQuery = "";
@@ -30,14 +30,10 @@ public partial class MainWindowViewModel : ObservableObject
     public IRelayCommand PlaySelectedCommand { get; }
     public IRelayCommand<Song> PlaySongCommand { get; }
 
-    public MainWindowViewModel()
-        : this(new MockMusicClient())
+    public MainWindowViewModel(ISearchService searchService, IPlaybackService playbackService)
     {
-    }
-
-    public MainWindowViewModel(IMusicClient musicClient)
-    {
-        _musicClient = musicClient;
+        _searchService = searchService;
+        _playbackService = playbackService;
 
         SearchCommand = new AsyncRelayCommand(SearchAsync);
         
@@ -58,9 +54,9 @@ public partial class MainWindowViewModel : ObservableObject
     {
         SearchResults.Clear();
 
-        var results = await _musicClient.SearchSongsAsync(SearchQuery);
+        var response = await _searchService.SearchAsync(SearchQuery);
 
-        foreach (var song in results)
+        foreach (var song in response.Songs)
         {
             SearchResults.Add(song);
         }
@@ -78,7 +74,9 @@ public partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        CurrentSong = song;
+        _playbackService.PlayAsync(song);
+        CurrentSong = _playbackService.CurrentSong;
+
         if (!Queue.Contains(song))
         {
             Queue.Insert(0, song);
