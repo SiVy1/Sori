@@ -15,10 +15,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Cache\Cache.csproj" />
+    <ProjectReference Include="..\Sori.Cache\Sori.Cache.csproj" />
     <ProjectReference Include="..\Core\Core.csproj" />
-    <ProjectReference Include="..\InnerTube\InnerTube.csproj" />
-    <ProjectReference Include="..\Player\Player.csproj" />
+    <ProjectReference Include="..\Sori.InnerTube\Sori.InnerTube.csproj" />
   </ItemGroup>
 
   <ItemGroup>
