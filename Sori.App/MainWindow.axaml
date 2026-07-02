@@ -1,9 +1,313 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="App.MainWindow"
-        Title="Sori.App">
-    Welcome to Avalonia!
+        Width="1180"
+        Height="760"
+        MinWidth="980"
+        MinHeight="640"
+        Background="#111214"
+        Title="Sori"
+        >
+
+    <Window.Styles>
+        <Style Selector="TextBlock">
+            <Setter Property="FontFamily" Value="Inter, Segoe UI, Arial"/>
+        </Style>
+
+        <Style Selector="Button">
+            <Setter Property="Background" Value="#18191D"/>
+            <Setter Property="Foreground" Value="#F2F2F2"/>
+            <Setter Property="BorderBrush" Value="#2A2B31"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="14,8"/>
+        </Style>
+
+        <Style Selector="TextBox">
+            <Setter Property="Background" Value="#18191D"/>
+            <Setter Property="Foreground" Value="#F2F2F2"/>
+            <Setter Property="BorderBrush" Value="#2A2B31"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="14,0"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+
+        <Style Selector="ListBox">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto,*,92"
+          ColumnDefinitions="230,*,340">
+
+        <!-- Sidebar -->
+        <Border Grid.RowSpan="3"
+                Grid.Column="0"
+                BorderBrush="#25262B"
+                BorderThickness="0,0,1,0"
+                Padding="24">
+
+            <Grid RowDefinitions="Auto,*,Auto">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Sori"
+                               FontSize="24"
+                               FontWeight="SemiBold"
+                               Foreground="#F2F2F2"/>
+
+                    <TextBlock Text="minimal music client"
+                               FontSize="12"
+                               Foreground="#77777D"/>
+                </StackPanel>
+
+                <StackPanel Grid.Row="1"
+                            Margin="0,42,0,0"
+                            Spacing="10">
+
+                    <Border Background="#1B1C21"
+                            CornerRadius="10"
+                            Padding="12,10">
+                        <TextBlock Text="Home"
+                                   Foreground="#A78BFA"
+                                   FontWeight="SemiBold"/>
+                    </Border>
+
+                    <TextBlock Text="Search"
+                               Foreground="#CFCFD4"
+                               Margin="12,8"/>
+
+                    <TextBlock Text="Library"
+                               Foreground="#CFCFD4"
+                               Margin="12,8"/>
+
+                    <TextBlock Text="Playlists"
+                               Foreground="#CFCFD4"
+                               Margin="12,8"/>
+
+                    <TextBlock Text="Now Playing"
+                               Foreground="#CFCFD4"
+                               Margin="12,8"/>
+                </StackPanel>
+
+                <TextBlock Grid.Row="2"
+                           Text="Settings"
+                           Foreground="#77777D"
+                           Margin="12,0,0,8"/>
+            </Grid>
+        </Border>
+
+        <!-- Top search -->
+        <Border Grid.Row="0"
+                Grid.Column="1"
+                Grid.ColumnSpan="2"
+                BorderBrush="#25262B"
+                BorderThickness="0,0,0,1"
+                Padding="28,22">
+
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBox Width="460"
+                         Height="42"
+                         HorizontalAlignment="Left"
+                         Watermark="Search songs, artists, albums..."
+                         Text="{Binding SearchQuery}"/>
+
+                <Button Grid.Column="1"
+                        Content="Search"
+                        Height="42"
+                        Command="{Binding SearchCommand}"/>
+            </Grid>
+        </Border>
+
+        <!-- Search results -->
+        <Grid Grid.Row="1"
+              Grid.Column="1"
+              RowDefinitions="Auto,*">
+
+            <StackPanel>
+                <TextBlock Text="Home"
+                           FontSize="28"
+                           FontWeight="SemiBold"
+                           Foreground="#F2F2F2"/>
+
+                <TextBlock Text="Search your library"
+                           FontSize="14"
+                           Foreground="#8E8E95"
+                           Margin="0,6,0,0"/>
+            </StackPanel>
+
+            <ListBox Grid.Row="1"
+                     Margin="0,30,0,0"
+                     ItemsSource="{Binding SearchResults}"
+                     SelectedItem="{Binding SelectedSong}">
+
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="#18191D"
+                                BorderBrush="#2A2B31"
+                                BorderThickness="1"
+                                CornerRadius="12"
+                                Padding="14"
+                                Margin="0,0,0,10">
+
+                            <Grid ColumnDefinitions="46,*,Auto,Auto">
+                                <Border Width="46"
+                                        Height="46"
+                                        CornerRadius="8"
+                                        Background="#24252B">
+
+                                    <TextBlock Text="♪"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Foreground="#A78BFA"
+                                               FontSize="20"/>
+                                </Border>
+
+                                <StackPanel Grid.Column="1"
+                                            Margin="14,0,0,0"
+                                            VerticalAlignment="Center"
+                                            Spacing="3">
+
+                                    <TextBlock Text="{Binding Title}"
+                                               Foreground="#F2F2F2"
+                                               FontSize="15"
+                                               FontWeight="SemiBold"/>
+
+                                    <TextBlock Text="{Binding Artist}"
+                                               Foreground="#9A9AA0"
+                                               FontSize="13"/>
+                                </StackPanel>
+
+                                <TextBlock Grid.Column="2"
+                                           Text="{Binding Album}"
+                                           Foreground="#77777D"
+                                           FontSize="13"
+                                           VerticalAlignment="Center"/>
+                                <Button Grid.Column="3" Content="Play" Margin="16,0,0,0" Command="{Binding DataContext.PlaySongCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding}" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+
+        <!-- Queue -->
+        <Border Grid.Row="1"
+                Grid.Column="2"
+                BorderBrush="#25262B"
+                BorderThickness="1,0,0,0"
+                Padding="26,32">
+
+            <Grid RowDefinitions="Auto,*">
+                <StackPanel>
+                    <TextBlock Text="Queue"
+                               FontSize="22"
+                               FontWeight="SemiBold"
+                               Foreground="#F2F2F2"/>
+
+                    <TextBlock Text="Upcoming songs"
+                               FontSize="13"
+                               Foreground="#77777D"
+                               Margin="0,5,0,0"/>
+                </StackPanel>
+
+                <ItemsControl Grid.Row="1"
+                              Margin="0,24,0,0"
+                              ItemsSource="{Binding Queue}">
+
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Padding="10"
+                                    Margin="0,0,0,8"
+                                    CornerRadius="10"
+                                    Background="#15161A">
+
+                                <StackPanel Spacing="3">
+                                    <TextBlock Text="{Binding Title}"
+                                               Foreground="#F2F2F2"
+                                               FontSize="14"/>
+
+                                    <TextBlock Text="{Binding Artist}"
+                                               Foreground="#8E8E95"
+                                               FontSize="12"/>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Grid>
+        </Border>
+
+        <!-- Bottom player -->
+        <Border Grid.Row="2"
+                Grid.ColumnSpan="3"
+                BorderBrush="#25262B"
+                BorderThickness="0,1,0,0"
+                Background="#111214"
+                Padding="24">
+
+            <Grid ColumnDefinitions="*,Auto,*">
+                <Grid ColumnDefinitions="52,*">
+                    <Border Width="52"
+                            Height="52"
+                            CornerRadius="10"
+                            Background="#24252B">
+
+                        <TextBlock Text="♪"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Foreground="#A78BFA"
+                                   FontSize="22"/>
+                    </Border>
+
+                    <StackPanel Grid.Column="1"
+                                Margin="14,0,0,0"
+                                VerticalAlignment="Center"
+                                Spacing="3">
+
+                        <TextBlock Text="{Binding CurrentSong.Title}"
+                                   Foreground="#F2F2F2"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"/>
+
+                        <TextBlock Text="{Binding CurrentSong.Artist}"
+                                   Foreground="#8E8E95"
+                                   FontSize="12"/>
+                    </StackPanel>
+                </Grid>
+
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center"
+                            Spacing="14">
+
+                    <Button Content="Prev"/>
+                    <Button Content="Play"
+                            Command="{Binding PlaySelectedCommand}"/>
+                    <Button Content="Next"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Spacing="12">
+
+                    <TextBlock Text="0:00"
+                               Foreground="#77777D"
+                               VerticalAlignment="Center"/>
+
+                    <Border Width="160"
+                            Height="4"
+                            Background="#2A2B31"
+                            CornerRadius="2"/>
+
+                    <TextBlock Text="0:00"
+                               Foreground="#77777D"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
 </Window>
