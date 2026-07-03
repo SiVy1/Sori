@@ -121,7 +121,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         Queue.Clear();
         
-        foreach (var song in SearchResults)
+        foreach (var song in _queueService.Items)
         {
             Queue.Add(song);
         }
