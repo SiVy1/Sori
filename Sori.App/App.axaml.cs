@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using App.Dev;
+using App.Services;
 using App.ViewModels;
 using Sori.Core.Interfaces;
 

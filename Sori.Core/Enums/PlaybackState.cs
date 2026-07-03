@@ -4,5 +4,7 @@ public enum PlaybackState
 {
     Stopped,
     Playing,
-    Paused
+    Paused,
+    Loading,
+    Error
 }

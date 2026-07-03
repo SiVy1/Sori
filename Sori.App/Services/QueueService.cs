@@ -3,7 +3,7 @@ using System.Linq;
 using Sori.Core.Interfaces;
 using Sori.Core.Models;
 
-namespace App.Dev;
+namespace App.Services;
 
 public sealed class QueueService : IQueueService
 {
@@ -64,7 +64,7 @@ public sealed class QueueService : IQueueService
     {
         var index = _items.FindIndex(x => x.Id == song.Id);
 
-        if (index <= 0)
+        if (index < 0)
         {
             return;
         }

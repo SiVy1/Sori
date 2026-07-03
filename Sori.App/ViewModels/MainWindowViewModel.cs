@@ -13,6 +13,7 @@ public partial class MainWindowViewModel : ObservableObject
 {
     private readonly ISearchService _searchService;
     private readonly IPlaybackService _playbackService;
+    private readonly IQueueService _queueService;
 
     [ObservableProperty]
     private string searchQuery = "";
@@ -45,19 +46,29 @@ public partial class MainWindowViewModel : ObservableObject
     
     public IAsyncRelayCommand<Song> PlaySongCommand { get; }
 
-    public MainWindowViewModel(ISearchService searchService, IPlaybackService playbackService, IQueueService queueService)
+    public MainWindowViewModel(
+        ISearchService searchService,
+        IPlaybackService playbackService,
+        IQueueService queueService)
     {
         _searchService = searchService;
         _playbackService = playbackService;
+        _queueService = queueService;
 
         SearchCommand = new AsyncRelayCommand(SearchAsync);
-        
+
         PlaySelectedCommand = new AsyncRelayCommand(
             PlaySelected,
             () => SelectedSong is not null
         );
-        
+
         PlaySongCommand = new AsyncRelayCommand<Song>(PlaySongAsync);
+
+        PauseCommand = new AsyncRelayCommand(PauseAsync);
+        ResumeCommand = new AsyncRelayCommand(ResumeAsync);
+        StopCommand = new AsyncRelayCommand(StopAsync);
+        NextCommand = new AsyncRelayCommand(NextAsync);
+        PreviousCommand = new AsyncRelayCommand(PreviousAsync);
     }
 
     partial void OnSelectedSongChanged(Song? value)
@@ -102,9 +113,61 @@ public partial class MainWindowViewModel : ObservableObject
         await _playbackService.PlayAsync(song);
         CurrentSong = _playbackService.CurrentSong;
 
-        if (!Queue.Contains(song))
+        _queueService.PlayNow(song);
+        SyncQueueFromService();
+    }
+
+    private void SyncQueueFromService()
+    {
+        Queue.Clear();
+        
+        foreach (var song in SearchResults)
         {
-            Queue.Insert(0, song);
+            Queue.Add(song);
         }
+    }
+    
+    private async Task PauseAsync()
+    {
+        await _playbackService.PauseAsync();
+    }
+
+    private async Task ResumeAsync()
+    {
+        await _playbackService.ResumeAsync();
+    }
+
+    private async Task StopAsync()
+    {
+        await _playbackService.StopAsync();
+        CurrentSong = _playbackService.CurrentSong;
+    }
+
+    private async Task NextAsync()
+    {
+        var next = _queueService.MoveNext();
+
+        if (next is null)
+        {
+            return;
+        }
+
+        await _playbackService.PlayAsync(next);
+        CurrentSong = _playbackService.CurrentSong;
+        SyncQueueFromService();
+    }
+
+    private async Task PreviousAsync()
+    {
+        var previous = _queueService.MovePrevious();
+
+        if (previous is null)
+        {
+            return;
+        }
+
+        await _playbackService.PlayAsync(previous);
+        CurrentSong = _playbackService.CurrentSong;
+        SyncQueueFromService();
     }
 }

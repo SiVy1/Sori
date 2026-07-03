@@ -1,4 +1,4 @@
-using Sori.Core.Models;
+namespace Sori.Core.Models;
 
 public sealed class SearchResponse
 {
