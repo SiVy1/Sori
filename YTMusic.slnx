@@ -1,12 +1,12 @@
 <Solution>
-  <Folder Name="/src/">
-    <Project Path="Sori.App/Sori.App.csproj" />
-    <Project Path="Sori.Cache/Sori.Cache.csproj" />
-    <Project Path="Sori.Core/Sori.Core.csproj" />
-    <Project Path="Sori.InnerTube/Sori.InnerTube.csproj" />
-    <Project Path="Sori.Player/Sori.Player.csproj" />
-  </Folder>
-  <Folder Name="/test/">
-    <Project Path="Tests/Tests.csproj" />
-  </Folder>
+    <Folder Name="/src/">
+        <Project Path="Sori.App/Sori.App.csproj"/>
+        <Project Path="Sori.Cache/Sori.Cache.csproj"/>
+        <Project Path="Sori.Core/Sori.Core.csproj"/>
+        <Project Path="Sori.InnerTube/Sori.InnerTube.csproj"/>
+        <Project Path="Sori.Player/Sori.Player.csproj"/>
+    </Folder>
+    <Folder Name="/test/">
+        <Project Path="Tests/Tests.csproj"/>
+    </Folder>
 </Solution>

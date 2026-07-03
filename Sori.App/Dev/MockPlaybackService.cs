@@ -20,20 +20,14 @@ public sealed class MockPlaybackService : IPlaybackService
 
     public Task PauseAsync(CancellationToken cancellationToken = default)
     {
-        if (State == PlaybackState.Playing)
-        {
-            State = PlaybackState.Paused;
-        }
+        if (State == PlaybackState.Playing) State = PlaybackState.Paused;
 
         return Task.CompletedTask;
     }
 
     public Task ResumeAsync(CancellationToken cancellationToken = default)
     {
-        if (CurrentSong is not null)
-        {
-            State = PlaybackState.Playing;
-        }
+        if (CurrentSong is not null) State = PlaybackState.Playing;
 
         return Task.CompletedTask;
     }

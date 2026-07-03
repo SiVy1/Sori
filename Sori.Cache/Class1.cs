@@ -1,7 +1,5 @@
-﻿namespace Cache
-{
-    public class Class1
-    {
+﻿namespace Cache;
 
-    }
+public class Class1
+{
 }

@@ -11,7 +11,7 @@ public sealed class QueueService : IQueueService
     private int _currentIndex = -1;
 
     public IReadOnlyList<Song> Items => _items;
-    
+
     public Song? Current => _currentIndex >= 0 && _currentIndex < _items.Count ? _items[_currentIndex] : null;
 
     public void PlayNow(Song song)
@@ -23,52 +23,37 @@ public sealed class QueueService : IQueueService
             _currentIndex = existingIndex;
             return;
         }
-        
+
         _items.Insert(0, song);
         _currentIndex = 0;
     }
 
     public void AddNext(Song song)
     {
-        if (_items.Any(x => x.Id == song.Id))
-        {
-            return;
-        }
-        
-        var insertIndex = _currentIndex >= 0 ? _currentIndex + 1: 0;
-        
+        if (_items.Any(x => x.Id == song.Id)) return;
+
+        var insertIndex = _currentIndex >= 0 ? _currentIndex + 1 : 0;
+
         _items.Insert(insertIndex, song);
 
-        if (_currentIndex < 0)
-        {
-            _currentIndex = 0;
-        }
+        if (_currentIndex < 0) _currentIndex = 0;
     }
 
     public void AddToTheEnd(Song song)
     {
-        if (_items.Any(x => x.Id == song.Id))
-        {
-            return;
-        }
-        
+        if (_items.Any(x => x.Id == song.Id)) return;
+
         _items.Add(song);
 
-        if (_currentIndex < 0)
-        {
-            _currentIndex = 0;
-        }
+        if (_currentIndex < 0) _currentIndex = 0;
     }
 
     public void Remove(Song song)
     {
         var index = _items.FindIndex(x => x.Id == song.Id);
 
-        if (index < 0)
-        {
-            return;
-        }
-        
+        if (index < 0) return;
+
         _items.RemoveAt(index);
 
         if (_items.Count == 0)
@@ -77,10 +62,7 @@ public sealed class QueueService : IQueueService
             return;
         }
 
-        if (_currentIndex >= _items.Count)
-        {
-            _currentIndex = _items.Count - 1;
-        }
+        if (_currentIndex >= _items.Count) _currentIndex = _items.Count - 1;
     }
 
     public void Clear()
@@ -88,33 +70,21 @@ public sealed class QueueService : IQueueService
         _items.Clear();
         _currentIndex = -1;
     }
-    
+
     public Song? MoveNext()
     {
-        if (_items.Count == 0)
-        {
-            return null;
-        }
+        if (_items.Count == 0) return null;
 
-        if (_currentIndex < _items.Count - 1)
-        {
-            _currentIndex++;
-        }
+        if (_currentIndex < _items.Count - 1) _currentIndex++;
 
         return Current;
     }
 
     public Song? MovePrevious()
     {
-        if (_items.Count == 0)
-        {
-            return null;
-        }
+        if (_items.Count == 0) return null;
 
-        if (_currentIndex > 0)
-        {
-            _currentIndex--;
-        }
+        if (_currentIndex > 0) _currentIndex--;
 
         return Current;
     }

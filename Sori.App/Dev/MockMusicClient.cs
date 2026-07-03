@@ -99,20 +99,12 @@ public sealed class MockMusicClient : ISearchService
     {
         await Task.Delay(150, cancellationToken);
 
-        if (query.Equals("empty", StringComparison.OrdinalIgnoreCase))
-        {
-            return new SearchResponse();
-        }
+        if (query.Equals("empty", StringComparison.OrdinalIgnoreCase)) return new SearchResponse();
 
         if (query.Equals("error", StringComparison.OrdinalIgnoreCase))
-        {
             throw new InvalidOperationException("Mock search error.");
-        }
 
-        if (string.IsNullOrWhiteSpace(query))
-        {
-            return new SearchResponse { Songs = _songs };
-        }
+        if (string.IsNullOrWhiteSpace(query)) return new SearchResponse { Songs = _songs };
 
         var normalizedQuery = query.Trim();
 

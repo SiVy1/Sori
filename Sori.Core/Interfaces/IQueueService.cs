@@ -5,7 +5,7 @@ namespace Sori.Core.Interfaces;
 public interface IQueueService
 {
     IReadOnlyList<Song> Items { get; }
-    
+
     Song? Current { get; }
 
     void PlayNow(Song song);

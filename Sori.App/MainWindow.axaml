@@ -6,36 +6,35 @@
         MinWidth="980"
         MinHeight="640"
         Background="#111214"
-        Title="Sori"
-        >
+        Title="Sori">
 
     <Window.Styles>
         <Style Selector="TextBlock">
-            <Setter Property="FontFamily" Value="Inter, Segoe UI, Arial"/>
+            <Setter Property="FontFamily" Value="Inter, Segoe UI, Arial" />
         </Style>
 
         <Style Selector="Button">
-            <Setter Property="Background" Value="#18191D"/>
-            <Setter Property="Foreground" Value="#F2F2F2"/>
-            <Setter Property="BorderBrush" Value="#2A2B31"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="10"/>
-            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="Background" Value="#18191D" />
+            <Setter Property="Foreground" Value="#F2F2F2" />
+            <Setter Property="BorderBrush" Value="#2A2B31" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="14,8" />
         </Style>
 
         <Style Selector="TextBox">
-            <Setter Property="Background" Value="#18191D"/>
-            <Setter Property="Foreground" Value="#F2F2F2"/>
-            <Setter Property="BorderBrush" Value="#2A2B31"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="10"/>
-            <Setter Property="Padding" Value="14,0"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Background" Value="#18191D" />
+            <Setter Property="Foreground" Value="#F2F2F2" />
+            <Setter Property="BorderBrush" Value="#2A2B31" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="14,0" />
+            <Setter Property="FontSize" Value="14" />
         </Style>
 
         <Style Selector="ListBox">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
         </Style>
     </Window.Styles>
 
@@ -54,11 +53,11 @@
                     <TextBlock Text="Sori"
                                FontSize="24"
                                FontWeight="SemiBold"
-                               Foreground="#F2F2F2"/>
+                               Foreground="#F2F2F2" />
 
                     <TextBlock Text="minimal music client"
                                FontSize="12"
-                               Foreground="#77777D"/>
+                               Foreground="#77777D" />
                 </StackPanel>
 
                 <StackPanel Grid.Row="1"
@@ -70,30 +69,30 @@
                             Padding="12,10">
                         <TextBlock Text="Home"
                                    Foreground="#A78BFA"
-                                   FontWeight="SemiBold"/>
+                                   FontWeight="SemiBold" />
                     </Border>
 
                     <TextBlock Text="Search"
                                Foreground="#CFCFD4"
-                               Margin="12,8"/>
+                               Margin="12,8" />
 
                     <TextBlock Text="Library"
                                Foreground="#CFCFD4"
-                               Margin="12,8"/>
+                               Margin="12,8" />
 
                     <TextBlock Text="Playlists"
                                Foreground="#CFCFD4"
-                               Margin="12,8"/>
+                               Margin="12,8" />
 
                     <TextBlock Text="Now Playing"
                                Foreground="#CFCFD4"
-                               Margin="12,8"/>
+                               Margin="12,8" />
                 </StackPanel>
 
                 <TextBlock Grid.Row="2"
                            Text="Settings"
                            Foreground="#77777D"
-                           Margin="12,0,0,8"/>
+                           Margin="12,0,0,8" />
             </Grid>
         </Border>
 
@@ -110,12 +109,12 @@
                          Height="42"
                          HorizontalAlignment="Left"
                          Watermark="Search songs, artists, albums..."
-                         Text="{Binding SearchQuery}"/>
+                         Text="{Binding SearchQuery}" />
 
                 <Button Grid.Column="1"
                         Content="Search"
                         Height="42"
-                        Command="{Binding SearchCommand}"/>
+                        Command="{Binding SearchCommand}" />
             </Grid>
         </Border>
 
@@ -128,12 +127,12 @@
                 <TextBlock Text="Home"
                            FontSize="28"
                            FontWeight="SemiBold"
-                           Foreground="#F2F2F2"/>
+                           Foreground="#F2F2F2" />
 
                 <TextBlock Text="Search your library"
                            FontSize="14"
                            Foreground="#8E8E95"
-                           Margin="0,6,0,0"/>
+                           Margin="0,6,0,0" />
             </StackPanel>
 
             <ListBox Grid.Row="1"
@@ -160,7 +159,7 @@
                                                HorizontalAlignment="Center"
                                                VerticalAlignment="Center"
                                                Foreground="#A78BFA"
-                                               FontSize="20"/>
+                                               FontSize="20" />
                                 </Border>
 
                                 <StackPanel Grid.Column="1"
@@ -171,19 +170,20 @@
                                     <TextBlock Text="{Binding Title}"
                                                Foreground="#F2F2F2"
                                                FontSize="15"
-                                               FontWeight="SemiBold"/>
+                                               FontWeight="SemiBold" />
 
                                     <TextBlock Text="{Binding ArtistName}"
                                                Foreground="#9A9AA0"
-                                               FontSize="13"/>
+                                               FontSize="13" />
                                 </StackPanel>
 
                                 <TextBlock Grid.Column="2"
                                            Text="{Binding AlbumTitle}"
                                            Foreground="#77777D"
                                            FontSize="13"
-                                           VerticalAlignment="Center"/>
-                                <Button Grid.Column="3" Content="Play" Margin="16,0,0,0" Command="{Binding DataContext.PlaySongCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                           VerticalAlignment="Center" />
+                                <Button Grid.Column="3" Content="Play" Margin="16,0,0,0"
+                                        Command="{Binding DataContext.PlaySongCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                         CommandParameter="{Binding}" />
                             </Grid>
                         </Border>
@@ -204,12 +204,12 @@
                     <TextBlock Text="Queue"
                                FontSize="22"
                                FontWeight="SemiBold"
-                               Foreground="#F2F2F2"/>
+                               Foreground="#F2F2F2" />
 
                     <TextBlock Text="Upcoming songs"
                                FontSize="13"
                                Foreground="#77777D"
-                               Margin="0,5,0,0"/>
+                               Margin="0,5,0,0" />
                 </StackPanel>
 
                 <ItemsControl Grid.Row="1"
@@ -226,11 +226,11 @@
                                 <StackPanel Spacing="3">
                                     <TextBlock Text="{Binding Title}"
                                                Foreground="#F2F2F2"
-                                               FontSize="14"/>
+                                               FontSize="14" />
 
                                     <TextBlock Text="{Binding ArtistName}"
                                                Foreground="#8E8E95"
-                                               FontSize="12"/>
+                                               FontSize="12" />
                                 </StackPanel>
                             </Border>
                         </DataTemplate>
@@ -258,7 +258,7 @@
                                    HorizontalAlignment="Center"
                                    VerticalAlignment="Center"
                                    Foreground="#A78BFA"
-                                   FontSize="22"/>
+                                   FontSize="22" />
                     </Border>
 
                     <StackPanel Grid.Column="1"
@@ -269,11 +269,11 @@
                         <TextBlock Text="{Binding CurrentSong.Title}"
                                    Foreground="#F2F2F2"
                                    FontSize="14"
-                                   FontWeight="SemiBold"/>
+                                   FontWeight="SemiBold" />
 
                         <TextBlock Text="{Binding CurrentSong.ArtistName}"
                                    Foreground="#8E8E95"
-                                   FontSize="12"/>
+                                   FontSize="12" />
                     </StackPanel>
                 </Grid>
 
@@ -282,10 +282,10 @@
                             VerticalAlignment="Center"
                             Spacing="14">
 
-                    <Button Content="Prev"/>
+                    <Button Content="Prev" />
                     <Button Content="Play"
-                            Command="{Binding PlaySelectedCommand}"/>
-                    <Button Content="Next"/>
+                            Command="{Binding PlaySelectedCommand}" />
+                    <Button Content="Next" />
                 </StackPanel>
 
                 <StackPanel Grid.Column="2"
@@ -296,16 +296,16 @@
 
                     <TextBlock Text="0:00"
                                Foreground="#77777D"
-                               VerticalAlignment="Center"/>
+                               VerticalAlignment="Center" />
 
                     <Border Width="160"
                             Height="4"
                             Background="#2A2B31"
-                            CornerRadius="2"/>
+                            CornerRadius="2" />
 
                     <TextBlock Text="0:00"
                                Foreground="#77777D"
-                               VerticalAlignment="Center"/>
+                               VerticalAlignment="Center" />
                 </StackPanel>
             </Grid>
         </Border>

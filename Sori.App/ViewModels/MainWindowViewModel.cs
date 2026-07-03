@@ -11,40 +11,19 @@ namespace App.ViewModels;
 
 public partial class MainWindowViewModel : ObservableObject
 {
-    private readonly ISearchService _searchService;
     private readonly IPlaybackService _playbackService;
     private readonly IQueueService _queueService;
+    private readonly ISearchService _searchService;
 
-    [ObservableProperty]
-    private string searchQuery = "";
+    [ObservableProperty] private Song? currentSong;
 
-    [ObservableProperty]
-    private SearchState searchState = SearchState.Idle;
+    [ObservableProperty] private string? searchError;
 
-    [ObservableProperty] 
-    private string? searchError;
-        
-    [ObservableProperty]
-    private Song? selectedSong;
+    [ObservableProperty] private string searchQuery = "";
 
-    [ObservableProperty]
-    private Song? currentSong;
+    [ObservableProperty] private SearchState searchState = SearchState.Idle;
 
-    public ObservableCollection<Song> SearchResults { get; } = new();
-
-    public ObservableCollection<Song> Queue { get; } = new();
-
-    public IAsyncRelayCommand SearchCommand { get; }
-
-    public IRelayCommand PlaySelectedCommand { get; }
-    
-    public IAsyncRelayCommand PauseCommand { get; }
-    public IAsyncRelayCommand StopCommand { get; }
-    public IAsyncRelayCommand NextCommand { get; }
-    public IAsyncRelayCommand PreviousCommand { get; }
-    public IAsyncRelayCommand ResumeCommand {get; }
-    
-    public IAsyncRelayCommand<Song> PlaySongCommand { get; }
+    [ObservableProperty] private Song? selectedSong;
 
     public MainWindowViewModel(
         ISearchService searchService,
@@ -71,6 +50,22 @@ public partial class MainWindowViewModel : ObservableObject
         PreviousCommand = new AsyncRelayCommand(PreviousAsync);
     }
 
+    public ObservableCollection<Song> SearchResults { get; } = new();
+
+    public ObservableCollection<Song> Queue { get; } = new();
+
+    public IAsyncRelayCommand SearchCommand { get; }
+
+    public IRelayCommand PlaySelectedCommand { get; }
+
+    public IAsyncRelayCommand PauseCommand { get; }
+    public IAsyncRelayCommand StopCommand { get; }
+    public IAsyncRelayCommand NextCommand { get; }
+    public IAsyncRelayCommand PreviousCommand { get; }
+    public IAsyncRelayCommand ResumeCommand { get; }
+
+    public IAsyncRelayCommand<Song> PlaySongCommand { get; }
+
     partial void OnSelectedSongChanged(Song? value)
     {
         PlaySelectedCommand.NotifyCanExecuteChanged();
@@ -84,10 +79,7 @@ public partial class MainWindowViewModel : ObservableObject
         try
         {
             var response = await _searchService.SearchAsync(SearchQuery);
-            foreach (var song in response.Songs)
-            {
-                SearchResults.Add(song);
-            }
+            foreach (var song in response.Songs) SearchResults.Add(song);
 
             SearchState = response.IsEmpty ? SearchState.Empty : SearchState.Results;
         }
@@ -102,13 +94,10 @@ public partial class MainWindowViewModel : ObservableObject
     {
         return PlaySongAsync(SelectedSong);
     }
-    
+
     private async Task PlaySongAsync(Song? song)
     {
-        if (song is null)
-        {
-            return;
-        }
+        if (song is null) return;
 
         await _playbackService.PlayAsync(song);
         CurrentSong = _playbackService.CurrentSong;
@@ -120,13 +109,10 @@ public partial class MainWindowViewModel : ObservableObject
     private void SyncQueueFromService()
     {
         Queue.Clear();
-        
-        foreach (var song in _queueService.Items)
-        {
-            Queue.Add(song);
-        }
+
+        foreach (var song in _queueService.Items) Queue.Add(song);
     }
-    
+
     private async Task PauseAsync()
     {
         await _playbackService.PauseAsync();
@@ -147,10 +133,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         var next = _queueService.MoveNext();
 
-        if (next is null)
-        {
-            return;
-        }
+        if (next is null) return;
 
         await _playbackService.PlayAsync(next);
         CurrentSong = _playbackService.CurrentSong;
@@ -161,10 +144,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         var previous = _queueService.MovePrevious();
 
-        if (previous is null)
-        {
-            return;
-        }
+        if (previous is null) return;
 
         await _playbackService.PlayAsync(previous);
         CurrentSong = _playbackService.CurrentSong;
