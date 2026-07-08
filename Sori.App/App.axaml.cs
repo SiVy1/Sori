@@ -7,6 +7,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using InnerTube;
+using InnerTube.Browse;
 using InnerTube.Search;
 using Sori.Core.Interfaces;
 
@@ -25,34 +26,41 @@ public class App : Application
         {
             var useInnerTube = true;
 
+            var innerTubeOptions = new InnerTubeOptions();
+            var httpClient = new HttpClient();
+            var innerTubeClient = new InnerTubeClient(httpClient, innerTubeOptions);
+            var contextFactory = new InnerTubeContextFactory(innerTubeOptions);
+
             ISearchService searchService;
+            ICollectionService collectionService;
 
             if (useInnerTube)
             {
-                Console.WriteLine("InnerTubeSearchService created");
-                var innerTubeOptions = new InnerTubeOptions();
-
-                var innerTubeClient = new InnerTubeClient(
-                    new HttpClient(),
-                    innerTubeOptions);
-
-                var contextFactory = new InnerTubeContextFactory(innerTubeOptions);
-                var searchMapper = new SearchMapper();
-
+                Console.WriteLine("InnerTube services created");
                 searchService = new InnerTubeSearchService(
                     innerTubeClient,
                     contextFactory,
-                    searchMapper);
+                    new SearchMapper());
+
+                collectionService = new InnerTubeCollectionService(
+                    innerTubeClient,
+                    contextFactory,
+                    new BrowseMapper());
             }
             else
             {
                 searchService = new MockMusicClient();
+                collectionService = new MockCollectionService();
             }
 
             IPlaybackService playbackService = new MockPlaybackService();
             IQueueService queueService = new QueueService();
 
-            var viewModel = new MainWindowViewModel(searchService, playbackService, queueService);
+            var viewModel = new MainWindowViewModel(
+                searchService,
+                playbackService,
+                queueService,
+                collectionService);
             desktop.MainWindow = new MainWindow { DataContext = viewModel };
         }
 

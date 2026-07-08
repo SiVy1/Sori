@@ -4,11 +4,15 @@ namespace Sori.Core.Interfaces;
 
 public interface ICollectionService
 {
-    Task<Playlist?> GetPlaylistAsync(
-        string id,
+    Task<CollectionDetail> GetAlbumAsync(
+        Album album,
         CancellationToken cancellationToken = default);
 
-    Task<Album?> GetAlbumAsync(
-        string id,
+    Task<CollectionDetail> GetPlaylistAsync(
+        Playlist playlist,
+        CancellationToken cancellationToken = default);
+
+    Task<ArtistDetail> GetArtistAsync(
+        Artist artist,
         CancellationToken cancellationToken = default);
 }

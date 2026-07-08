@@ -19,17 +19,6 @@ public sealed class InnerTubeClient
         object body,
         CancellationToken cancellationToken = default)
     {
-        var debugDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
-            "sori-debug");
-
-        Directory.CreateDirectory(debugDir);
-
-        await File.WriteAllTextAsync(
-            Path.Combine(debugDir, "01-before-request.txt"),
-            $"Endpoint: {endpoint}\nUrl: {BuildUrl(endpoint)}",
-            cancellationToken);
-
         var url = BuildUrl(endpoint);
 
         using var request = new HttpRequestMessage(HttpMethod.Post, url);
@@ -46,27 +35,12 @@ public sealed class InnerTubeClient
 
         request.Content = JsonContent.Create(body);
 
-        await File.WriteAllTextAsync(
-            Path.Combine(debugDir, "02-before-send.txt"),
-            "About to send request",
-            cancellationToken);
-
         using var response = await _httpClient.SendAsync(
             request,
             HttpCompletionOption.ResponseHeadersRead,
             cancellationToken);
 
-        await File.WriteAllTextAsync(
-            Path.Combine(debugDir, "03-after-send.txt"),
-            $"Status: {(int)response.StatusCode} {response.ReasonPhrase}",
-            cancellationToken);
-
         var responseText = await response.Content.ReadAsStringAsync(cancellationToken);
-
-        await File.WriteAllTextAsync(
-            Path.Combine(debugDir, "04-response.json"),
-            responseText,
-            cancellationToken);
 
         if (!response.IsSuccessStatusCode)
             throw new HttpRequestException(

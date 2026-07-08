@@ -7,4 +7,5 @@ public sealed class Album
     public string ArtistName { get; init; } = "";
     public string Year { get; init; } = "";
     public string? ThumbnailUrl { get; init; }
+    public string? SourceId { get; init; }
 }

@@ -7,4 +7,5 @@ public sealed class Playlist
     public string? ThumbnailUrl { get; init; }
     public string Description { get; init; } = "";
     public int SongCount { get; init; }
+    public string? SourceId { get; init; }
 }
