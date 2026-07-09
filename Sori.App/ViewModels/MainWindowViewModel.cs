@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using App.Enums;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Sori.Core.Enums;
 using Sori.Core.Interfaces;
 using Sori.Core.Models;
 
@@ -16,6 +18,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly IQueueService _queueService;
     private readonly IPrefetchingPlaybackResolver? _prefetchResolver;
     private readonly ICollectionService _collectionService;
+    private readonly IUpNextService _upNextService;
 
     [ObservableProperty] private MainContentView currentView = MainContentView.Home;
 
@@ -32,6 +35,7 @@ public partial class MainWindowViewModel : ObservableObject
         IQueueService queueService,
         ICollectionService collectionService,
         IHomeService homeService,
+        IUpNextService upNextService,
         IPlaybackCoordinator playbackCoordinator,
         IPrefetchingPlaybackResolver? prefetchResolver = null)
     {
@@ -39,6 +43,7 @@ public partial class MainWindowViewModel : ObservableObject
         _queueService = queueService;
         _prefetchResolver = prefetchResolver;
         _collectionService = collectionService;
+        _upNextService = upNextService;
 
         Player = new PlayerBarViewModel(playbackCoordinator, queueService);
         Queue = new QueueViewModel(queueService);
@@ -95,10 +100,9 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void WireSearchEvents()
     {
+        // ponytail: keep modal open for queue/playback actions; close only for navigation
         Search.SongActivated += async (_, args) =>
         {
-            IsModalOpen = false;
-            _ = StartModalCooldown();
             await PlaySongAsync(args.Song, args.ContextSongs);
         };
 
@@ -139,56 +143,43 @@ public partial class MainWindowViewModel : ObservableObject
         Search.ToggleQueueRequested += (_, _) =>
         {
             ToggleQueue();
-            IsModalOpen = false;
-            _ = StartModalCooldown();
         };
 
         Search.PlaySelectedRequested += async (_, _) =>
         {
-            IsModalOpen = false;
-            _ = StartModalCooldown();
-
             var selectedIndex = Search.ModalSelectedIndex;
             if (selectedIndex >= 0 && selectedIndex < Search.ModalItems.Count)
             {
                 var item = Search.ModalItems[selectedIndex];
                 if (item.Kind == HomeItemKind.Song && item.Song is not null)
                 {
-                    await PlaySongAsync(item.Song, Search.SearchSongs);
+                    await PlaySongAsync(item.Song, null);
                 }
             }
         };
 
         Search.TogglePlayPauseRequested += async (_, _) =>
         {
-            IsModalOpen = false;
-            _ = StartModalCooldown();
             await Player.TogglePlayPauseCommand.ExecuteAsync(null);
         };
 
         Search.NextRequested += async (_, _) =>
         {
-            IsModalOpen = false;
-            _ = StartModalCooldown();
             await Player.NextCommand.ExecuteAsync(null);
         };
 
         Search.PreviousRequested += async (_, _) =>
         {
-            IsModalOpen = false;
-            _ = StartModalCooldown();
             await Player.PreviousCommand.ExecuteAsync(null);
         };
 
         Search.AddToQueueRequested += (_, song) =>
         {
-            _queueService.AddToTheEnd(song);
+            AddToQueueEnd(song);
         };
 
         Search.PlayNowRequested += async (_, song) =>
         {
-            IsModalOpen = false;
-            _ = StartModalCooldown();
             await PlaySongAsync(song, null);
         };
     }
@@ -202,15 +193,41 @@ public partial class MainWindowViewModel : ObservableObject
         if (contextSongs is not null)
         {
             _queueService.SetContext(contextSongs, song);
+            CurrentSong = song;
+            await PlayCurrentQueueItemAsync();
+            return;
         }
-        else if (_queueService.Items.All(x => x.Id != song.Id))
+
+        var wasEmpty = _queueService.Items.Count == 0;
+        if (wasEmpty)
         {
-            _queueService.PlayNow(song);
+            Search.IsAddingToQueue = true;
+            // First song: fetch /next radio queue
+            try
+            {
+                var upNext = await _upNextService.GetUpNextAsync(song);
+                _queueService.SetQueue([upNext.Current], 0);
+                if (upNext.Items.Count > 0)
+                {
+                    _queueService.SetRadioQueue(upNext.Items);
+                }
+            }
+            catch (Exception)
+            {
+                _queueService.SetQueue([song], 0);
+            }
+            finally
+            {
+                Search.IsAddingToQueue = false;
+            }
+            CurrentSong = song;
+            await PlayCurrentQueueItemAsync();
         }
-
-        CurrentSong = song;
-
-        await PlayCurrentQueueItemAsync();
+        else
+        {
+            // ponytail: queue not empty — add to end of user queue
+            _queueService.AddToTheEnd(song);
+        }
     }
 
     private async Task PlayCurrentQueueItemAsync()
@@ -295,13 +312,33 @@ public partial class MainWindowViewModel : ObservableObject
     private void AddNext(Song? song)
     {
         if (song is null) return;
+
+        var wasEmpty = _queueService.Items.Count == 0;
         _queueService.AddNext(song);
+
+        if (wasEmpty && ShouldAutoPlay())
+        {
+            _ = PlayCurrentQueueItemAsync();
+        }
     }
 
     private void AddToQueueEnd(Song? song)
     {
         if (song is null) return;
+
+        var wasEmpty = _queueService.Items.Count == 0;
         _queueService.AddToTheEnd(song);
+
+        if (wasEmpty && ShouldAutoPlay())
+        {
+            _ = PlayCurrentQueueItemAsync();
+        }
+    }
+
+    private bool ShouldAutoPlay()
+    {
+        var state = _playbackCoordinator.Snapshot.State;
+        return state is not PlaybackState.Playing and not PlaybackState.Paused and not PlaybackState.Loading;
     }
 
     public async Task StartModalCooldown()

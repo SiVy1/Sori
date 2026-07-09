@@ -19,6 +19,8 @@ public partial class MainWindow : Window
             RoutingStrategies.Tunnel,
             handledEventsToo: true);
 
+        ModalListBox.DoubleTapped += OnModalListBoxDoubleTapped;
+
         DataContextChanged += (_, _) =>
         {
             if (DataContext is MainWindowViewModel vm)
@@ -135,11 +137,11 @@ public partial class MainWindow : Window
             {
                 if (e.KeyModifiers == KeyModifiers.Control)
                 {
-                    vm.Search.PlaySelectedNow();
+                    vm.Search.AddSelectedToQueue();
                 }
                 else
                 {
-                    vm.Search.AddSelectedToQueue();
+                    vm.Search.PlaySelectedNow();
                 }
             }
 
@@ -186,6 +188,17 @@ public partial class MainWindow : Window
         if (CommandListBox.IsVisible)
             return CommandListBox.SelectedIndex;
         return ModalListBox.SelectedIndex;
+    }
+
+    private void OnModalListBoxDoubleTapped(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm)
+            return;
+
+        if (vm.Search.ModalItems.Count > 0 && ModalListBox.SelectedIndex >= 0)
+        {
+            vm.Search.PlaySelectedNow();
+        }
     }
 
     private static bool IsInside(object? focused, Control parent)

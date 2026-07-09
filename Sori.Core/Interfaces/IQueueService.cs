@@ -39,4 +39,9 @@ public interface IQueueService
 
     void SetRepeatMode(RepeatMode mode);
     RepeatMode CycleRepeatMode();
+
+    bool RadioEnabled { get; }
+    int UserItemCount { get; }
+    void ToggleRadio();
+    void SetRadioQueue(IEnumerable<Song> songs);
 }

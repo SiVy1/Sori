@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Sori.Core.Enums;
 using Sori.Core.Interfaces;
 using Sori.Core.Models;
 
@@ -94,19 +95,26 @@ public sealed class MockMusicClient : ISearchService
     ];
 
     public async Task<SearchResponse> SearchAsync(
-        string query,
+        SearchRequest request,
         CancellationToken cancellationToken = default)
     {
         await Task.Delay(150, cancellationToken);
 
-        if (query.Equals("empty", StringComparison.OrdinalIgnoreCase)) return new SearchResponse();
+        if (request.Query.Equals("empty", StringComparison.OrdinalIgnoreCase)) return new SearchResponse();
 
-        if (query.Equals("error", StringComparison.OrdinalIgnoreCase))
+        if (request.Query.Equals("error", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Mock search error.");
 
-        if (string.IsNullOrWhiteSpace(query)) return new SearchResponse { Songs = _songs };
+        if (string.IsNullOrWhiteSpace(request.Query))
+        {
+            return request.Filter switch
+            {
+                SearchFilter.Songs => new SearchResponse { Songs = _songs },
+                _ => new SearchResponse { Songs = _songs }
+            };
+        }
 
-        var normalizedQuery = query.Trim();
+        var normalizedQuery = request.Query.Trim();
 
         var results = _songs
             .Where(song =>
@@ -115,6 +123,10 @@ public sealed class MockMusicClient : ISearchService
                 (song.AlbumTitle?.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase) ?? false))
             .ToList();
 
-        return new SearchResponse { Songs = results };
+        return request.Filter switch
+        {
+            SearchFilter.Songs => new SearchResponse { Songs = results },
+            _ => new SearchResponse { Songs = results }
+        };
     }
 }

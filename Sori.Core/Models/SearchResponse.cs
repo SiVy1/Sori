@@ -7,5 +7,7 @@ public sealed class SearchResponse
     public IReadOnlyList<Artist> Artists { get; init; } = [];
     public IReadOnlyList<Playlist> Playlists { get; init; } = [];
 
+    public int TotalCount => Songs.Count + Albums.Count + Artists.Count + Playlists.Count;
+
     public bool IsEmpty => Songs.Count == 0 && Albums.Count == 0 && Artists.Count == 0 && Playlists.Count == 0;
 }

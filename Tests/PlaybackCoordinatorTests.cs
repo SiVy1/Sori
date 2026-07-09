@@ -110,6 +110,10 @@ public class PlaybackCoordinatorTests
         public void ToggleShuffle() { }
         public void SetRepeatMode(RepeatMode mode) { }
         public RepeatMode CycleRepeatMode() => RepeatMode.Off;
+        public int UserItemCount => _items.Count;
+        public bool RadioEnabled => false;
+        public void ToggleRadio() { }
+        public void SetRadioQueue(IEnumerable<Song> songs) { }
     }
 
     private class FakeAudio : IAudioPlaybackService

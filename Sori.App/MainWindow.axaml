@@ -93,7 +93,7 @@
                         BorderThickness="1"
                         CornerRadius="12"
                         BoxShadow="0 8 32 0 #00000080">
-                    <Grid RowDefinitions="Auto,Auto,*">
+                    <Grid RowDefinitions="Auto,Auto,Auto,*">
                         <!-- Search input -->
                         <Grid ColumnDefinitions="Auto,*,Auto"
                               Margin="16,10,16,0"
@@ -139,18 +139,44 @@
                                 IsVisible="{Binding IsCommandMode}"
                                 Background="#1A1A1C"
                                 Padding="16,8"
-                                Margin="0,8,0,0"
-                                DataContext="{Binding}">
-                            <TextBlock Text="Command mode"
+                                Margin="0,8,0,0">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Command mode"
+                                           Foreground="#A78BFA"
+                                           FontSize="12"
+                                           FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding CommandHintText}"
+                                           Foreground="#88888A"
+                                           FontSize="11"
+                                           TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Adding to queue indicator -->
+                        <Border Grid.Row="2"
+                                IsVisible="{Binding IsAddingToQueue}"
+                                Background="#1A1A1C"
+                                Padding="16,8"
+                                Margin="0,8,0,0">
+                            <TextBlock Text="Adding to queue..."
                                        Foreground="#A78BFA"
                                        FontSize="12"
                                        FontWeight="SemiBold" />
                         </Border>
 
                         <!-- Results -->
-                        <Grid Grid.Row="2"
+                        <Grid Grid.Row="3"
                               Margin="16,8,16,16"
                               RowDefinitions="Auto,*">
+
+                            <!-- Search loading indicator -->
+                            <TextBlock Grid.Row="0"
+                                       Text="{Binding SearchingText}"
+                                       Foreground="#A78BFA"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       Margin="0,0,0,8"
+                                       IsVisible="{Binding IsSearching}" />
 
                             <!-- Command palette -->
                             <ListBox x:Name="CommandListBox"
@@ -616,7 +642,7 @@
                 Width="300"
                 IsVisible="{Binding DataContext.IsQueueVisible, RelativeSource={RelativeSource AncestorType=Window}}"
                 DataContext="{Binding Queue}">
-            <Grid RowDefinitions="Auto,Auto,Auto,*">
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
                 <TextBlock Text="Queue"
                            FontSize="18"
                            FontWeight="Bold"
@@ -681,6 +707,46 @@
                                FontWeight="SemiBold"
                                Foreground="#666668" />
                     <ItemsControl ItemsSource="{Binding UpNextItems}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="32,*" Margin="0,0,0,10">
+                                    <Border Width="32"
+                                            Height="32"
+                                            CornerRadius="3"
+                                            ClipToBounds="True"
+                                            Background="#1A1A1C">
+                                        <Image Stretch="UniformToFill"
+                                               Source="{Binding ThumbnailUrl, Converter={StaticResource UrlBitmap}}" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1"
+                                                Margin="10,0,0,0"
+                                                Spacing="2"
+                                                VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Title}"
+                                                   Foreground="#E8E8E8"
+                                                   FontSize="13"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding ArtistName}"
+                                                   Foreground="#88888A"
+                                                   FontSize="11"
+                                                   TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- Radio queue -->
+                <StackPanel Grid.Row="3"
+                            Margin="0,16,0,0"
+                            Spacing="8"
+                            IsVisible="{Binding HasRadioItems}">
+                    <TextBlock Text="Radio"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               Foreground="#A78BFA" />
+                    <ItemsControl ItemsSource="{Binding RadioItems}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Grid ColumnDefinitions="32,*" Margin="0,0,0,10">
@@ -903,6 +969,20 @@
                                        Foreground="#A78BFA"
                                        FontSize="10"
                                        IsVisible="{Binding DataContext.Queue.IsRepeatActive, RelativeSource={RelativeSource AncestorType=Window}}" />
+                        </Grid>
+                    </Button>
+                    <Button Classes="player-btn"
+                            Command="{Binding DataContext.Queue.ToggleRadioCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                            ToolTip.Tip="Toggle radio">
+                        <Grid>
+                            <TextBlock Text="{Binding DataContext.Queue.RadioText, RelativeSource={RelativeSource AncestorType=Window}}"
+                                       Foreground="#88888A"
+                                       FontSize="10"
+                                       IsVisible="{Binding !DataContext.Queue.IsRadioActive, RelativeSource={RelativeSource AncestorType=Window}}" />
+                            <TextBlock Text="{Binding DataContext.Queue.RadioText, RelativeSource={RelativeSource AncestorType=Window}}"
+                                       Foreground="#A78BFA"
+                                       FontSize="10"
+                                       IsVisible="{Binding DataContext.Queue.IsRadioActive, RelativeSource={RelativeSource AncestorType=Window}}" />
                         </Grid>
                     </Button>
                     <Path Data="{StaticResource IconVolume}"

@@ -15,6 +15,7 @@ namespace App.ViewModels;
 public partial class SearchViewModel : ObservableObject
 {
     private readonly ISearchService _searchService;
+    private SearchFilter _currentFilter = SearchFilter.All;
 
     [ObservableProperty] private string? searchError;
 
@@ -27,6 +28,31 @@ public partial class SearchViewModel : ObservableObject
     [ObservableProperty] private SearchState searchState = SearchState.Idle;
 
     [ObservableProperty] private int modalSelectedIndex = -1;
+
+    [ObservableProperty] private bool isAddingToQueue;
+
+    public string SearchingText => _currentFilter == SearchFilter.All
+        ? "Searching..."
+        : $"Searching {_currentFilter.ToString().ToLower()}...";
+
+    public string CommandHintText
+    {
+        get
+        {
+            if (!IsCommandMode || string.IsNullOrWhiteSpace(CommandQuery)) return "Type a command";
+            var parts = CommandQuery.Trim().Split(' ', 2);
+            var cmd = parts[0].ToLowerInvariant();
+            var query = parts.Length > 1 ? parts[1] : null;
+            return cmd switch
+            {
+                "song" or "songs" => query is not null ? $"Search songs: \"{query}\" — Enter to run" : "Search songs — type a query",
+                "album" or "albums" => query is not null ? $"Search albums: \"{query}\" — Enter to run" : "Search albums — type a query",
+                "artist" or "artists" => query is not null ? $"Search artists: \"{query}\" — Enter to run" : "Search artists — type a query",
+                "playlist" or "playlists" => query is not null ? $"Search playlists: \"{query}\" — Enter to run" : "Search playlists — type a query",
+                _ => query is not null ? $"Command: {cmd} \"{query}\"" : $"Command: {cmd}"
+            };
+        }
+    }
 
     public SearchViewModel(ISearchService searchService)
     {
@@ -68,13 +94,17 @@ public partial class SearchViewModel : ObservableObject
 
     private static readonly List<CommandItem> AllCommands = new()
     {
-        new("home", "Go to home", "Ctrl+Space > home"),
-        new("search", "Search music", "Ctrl+Space > search"),
-        new("queue", "Toggle queue visibility", "Ctrl+Space > queue"),
-        new("play", "Play selected track", "Ctrl+Space > play"),
-        new("pause", "Pause playback", "Ctrl+Space > pause"),
-        new("next", "Next track", "Ctrl+Space > next"),
-        new("prev", "Previous track", "Ctrl+Space > prev")
+        new("home", "Go to home", "> home"),
+        new("search", "Search music", "> search"),
+        new("queue", "Toggle queue panel", "> queue"),
+        new("play", "Play selected track", "> play"),
+        new("pause", "Pause playback", "> pause"),
+        new("next", "Skip to next track", "> next"),
+        new("prev", "Go to previous track", "> prev"),
+        new("song", "Search songs — >song query", "> song workout"),
+        new("album", "Search albums — >album query", "> album dark side"),
+        new("artist", "Search artists — >artist query", "> artist metallica"),
+        new("playlist", "Search playlists — >playlist query", "> playlist black parade")
     };
 
     partial void OnSearchQueryChanged(string value)
@@ -86,6 +116,11 @@ public partial class SearchViewModel : ObservableObject
         {
             FilterCommands();
         }
+        else
+        {
+            _currentFilter = SearchFilter.All;
+        }
+        OnPropertyChanged(nameof(CommandHintText));
     }
 
     private void FilterCommands()
@@ -110,14 +145,21 @@ public partial class SearchViewModel : ObservableObject
     {
         ClearSearchResults();
         ModalItems.Clear();
-        NotifySearchSectionChanges();
 
         SearchError = null;
         SearchState = SearchState.Loading;
+        NotifySearchSectionChanges();
 
         try
         {
-            var response = await _searchService.SearchAsync(SearchQuery);
+            var request = new SearchRequest
+            {
+                Query = SearchQuery,
+                Filter = _currentFilter,
+                Limit = _currentFilter == SearchFilter.All ? 20 : 50
+            };
+
+            var response = await _searchService.SearchAsync(request);
 
             foreach (var song in response.Songs) SearchSongs.Add(song);
             foreach (var album in response.Albums) SearchAlbums.Add(album);
@@ -216,7 +258,7 @@ public partial class SearchViewModel : ObservableObject
             return;
         }
 
-        var cmd = CommandQuery.Trim().ToLowerInvariant();
+        var cmd = CommandQuery.Trim().ToLowerInvariant().Split(' ', 2)[0];
         ExecuteCommandByName(cmd);
     }
 
@@ -250,7 +292,41 @@ public partial class SearchViewModel : ObservableObject
                 PreviousRequested?.Invoke(this, EventArgs.Empty);
                 CloseRequested?.Invoke(this, EventArgs.Empty);
                 break;
+            case "song":
+            case "songs":
+                IsCommandMode = false;
+                SearchQuery = ExtractQueryAfterCommand();
+                _currentFilter = SearchFilter.Songs;
+                _ = SearchAsync();
+                break;
+            case "album":
+            case "albums":
+                IsCommandMode = false;
+                SearchQuery = ExtractQueryAfterCommand();
+                _currentFilter = SearchFilter.Albums;
+                _ = SearchAsync();
+                break;
+            case "artist":
+            case "artists":
+                IsCommandMode = false;
+                SearchQuery = ExtractQueryAfterCommand();
+                _currentFilter = SearchFilter.Artists;
+                _ = SearchAsync();
+                break;
+            case "playlist":
+            case "playlists":
+                IsCommandMode = false;
+                SearchQuery = ExtractQueryAfterCommand();
+                _currentFilter = SearchFilter.Playlists;
+                _ = SearchAsync();
+                break;
         }
+    }
+
+    private string ExtractQueryAfterCommand()
+    {
+        var parts = CommandQuery.Trim().Split(' ', 2);
+        return parts.Length > 1 ? parts[1] : "";
     }
 
     private void ClearSearchResults()
@@ -261,12 +337,16 @@ public partial class SearchViewModel : ObservableObject
         SearchPlaylists.Clear();
     }
 
+    public bool IsSearching => SearchState == SearchState.Loading;
+
     private void NotifySearchSectionChanges()
     {
         OnPropertyChanged(nameof(HasSongs));
         OnPropertyChanged(nameof(HasAlbums));
         OnPropertyChanged(nameof(HasArtists));
         OnPropertyChanged(nameof(HasPlaylists));
+        OnPropertyChanged(nameof(IsSearching));
+        OnPropertyChanged(nameof(SearchingText));
     }
 
     public bool HasSongs => SearchSongs.Count > 0;

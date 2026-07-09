@@ -8,50 +8,76 @@ namespace App.Services;
 
 public sealed class QueueService : IQueueService
 {
-    private readonly List<Song> _items = [];
+    private readonly List<Song> _userItems = [];
+    private readonly List<Song> _radioItems = [];
     private readonly Random _random = new();
     private readonly List<string> _shuffleHistory = [];
 
-    private int _currentIndex = -1;
+    private int _userCurrentIndex = -1;
+    private int _radioCurrentIndex = -1;
+    private bool _isInRadio;
     private string? _plannedShuffleNextId;
 
-    public IReadOnlyList<Song> Items => _items;
+    public IReadOnlyList<Song> Items => _userItems.Concat(_radioItems).ToList();
 
-    public int CurrentIndex => _currentIndex;
+    public int CurrentIndex
+    {
+        get
+        {
+            if (_isInRadio && _radioCurrentIndex >= 0)
+                return _userItems.Count + _radioCurrentIndex;
+            return _userCurrentIndex;
+        }
+    }
 
-    public Song? Current => _currentIndex >= 0 && _currentIndex < _items.Count ? _items[_currentIndex] : null;
+    public Song? Current
+    {
+        get
+        {
+            if (_isInRadio)
+                return _radioCurrentIndex >= 0 && _radioCurrentIndex < _radioItems.Count
+                    ? _radioItems[_radioCurrentIndex]
+                    : null;
+            return _userCurrentIndex >= 0 && _userCurrentIndex < _userItems.Count
+                ? _userItems[_userCurrentIndex]
+                : null;
+        }
+    }
 
     public bool ShuffleEnabled { get; private set; }
 
     public RepeatMode RepeatMode { get; private set; } = RepeatMode.Off;
 
+    public int UserItemCount => _userItems.Count;
+
+    public bool RadioEnabled { get; private set; } = true;
+
     public event EventHandler? Changed;
 
     public void PlayNow(Song song)
     {
-        var existingIndex = _items.FindIndex(x => x.Id == song.Id);
-
-        if (existingIndex >= 0)
-        {
-            _currentIndex = existingIndex;
-            Changed?.Invoke(this, EventArgs.Empty);
-            return;
-        }
-
-        _items.Insert(0, song);
-        _currentIndex = 0;
+        _userItems.Insert(0, song);
+        _userCurrentIndex = 0;
+        _isInRadio = false;
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
     public void AddNext(Song song)
     {
-        if (_items.Any(x => x.Id == song.Id)) return;
+        int insertIndex;
+        if (_isInRadio)
+        {
+            // Current is in radio; insert at end of user items (right before radio).
+            insertIndex = _userItems.Count;
+        }
+        else
+        {
+            insertIndex = _userCurrentIndex >= 0 ? _userCurrentIndex + 1 : 0;
+        }
 
-        var insertIndex = _currentIndex >= 0 ? _currentIndex + 1 : 0;
+        _userItems.Insert(insertIndex, song);
 
-        _items.Insert(insertIndex, song);
-
-        if (_currentIndex < 0) _currentIndex = 0;
+        if (_userCurrentIndex < 0) _userCurrentIndex = 0;
 
         // In shuffle mode, prioritize the just-added song as the next track.
         if (ShuffleEnabled)
@@ -64,62 +90,116 @@ public sealed class QueueService : IQueueService
 
     public void AddToTheEnd(Song song)
     {
-        if (_items.Any(x => x.Id == song.Id)) return;
+        _userItems.Add(song);
 
-        _items.Add(song);
-
-        if (_currentIndex < 0) _currentIndex = 0;
+        if (_userCurrentIndex < 0) _userCurrentIndex = 0;
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
     public void Remove(Song song)
     {
-        var index = _items.FindIndex(x => x.Id == song.Id);
-
-        if (index < 0) return;
-
-        _items.RemoveAt(index);
-
-        if (_items.Count == 0)
+        var userIndex = _userItems.FindIndex(x => x.Id == song.Id);
+        if (userIndex >= 0)
         {
-            _currentIndex = -1;
-            _shuffleHistory.Clear();
-            _plannedShuffleNextId = null;
+            _userItems.RemoveAt(userIndex);
+            _shuffleHistory.RemoveAll(id => _userItems.All(x => x.Id != id));
+            if (_plannedShuffleNextId is not null &&
+                _userItems.All(x => x.Id != _plannedShuffleNextId) &&
+                _radioItems.All(x => x.Id != _plannedShuffleNextId))
+            {
+                _plannedShuffleNextId = null;
+            }
+
+            if (!_isInRadio)
+            {
+                if (userIndex < _userCurrentIndex)
+                {
+                    _userCurrentIndex--;
+                }
+                else if (userIndex == _userCurrentIndex)
+                {
+                    // Current removed; stay at same index or clamp to end.
+                    if (_userCurrentIndex >= _userItems.Count)
+                    {
+                        if (_radioItems.Count > 0 && RadioEnabled)
+                        {
+                            _isInRadio = true;
+                            _radioCurrentIndex = 0;
+                        }
+                        else
+                        {
+                            _userCurrentIndex = _userItems.Count - 1;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // Current is in radio, just adjust user index for back-navigation.
+                if (userIndex < _userCurrentIndex)
+                {
+                    _userCurrentIndex--;
+                }
+            }
+
+            if (_userItems.Count == 0 && _radioItems.Count == 0)
+            {
+                _userCurrentIndex = -1;
+                _radioCurrentIndex = -1;
+                _isInRadio = false;
+                _shuffleHistory.Clear();
+                _plannedShuffleNextId = null;
+            }
+
             Changed?.Invoke(this, EventArgs.Empty);
             return;
         }
 
-        if (index < _currentIndex)
+        var radioIndex = _radioItems.FindIndex(x => x.Id == song.Id);
+        if (radioIndex >= 0)
         {
-            _currentIndex--;
-        }
-        else if (index == _currentIndex)
-        {
-            // Current removed; stay at same index (now points to next item)
-            // or clamp to end if we were at the last position.
-            if (_currentIndex >= _items.Count)
+            _radioItems.RemoveAt(radioIndex);
+
+            if (_isInRadio)
             {
-                _currentIndex = _items.Count - 1;
+                if (radioIndex < _radioCurrentIndex)
+                {
+                    _radioCurrentIndex--;
+                }
+                else if (radioIndex == _radioCurrentIndex)
+                {
+                    // Current radio item removed; check boundaries.
+                    if (_radioCurrentIndex >= _radioItems.Count)
+                    {
+                        if (_radioItems.Count > 0)
+                        {
+                            _radioCurrentIndex = _radioItems.Count - 1;
+                        }
+                        else
+                        {
+                            // No radio items left; fall back to user items.
+                            _isInRadio = false;
+                            _radioCurrentIndex = -1;
+                            if (_userItems.Count > 0)
+                                _userCurrentIndex = Math.Min(_userCurrentIndex, _userItems.Count - 1);
+                            else
+                                _userCurrentIndex = -1;
+                        }
+                    }
+                }
             }
+
+            Changed?.Invoke(this, EventArgs.Empty);
         }
-
-        // Clean up shuffle history entries that no longer exist.
-        _shuffleHistory.RemoveAll(id => _items.All(x => x.Id != id));
-
-        // Invalidate planned next if the planned song was removed.
-        if (_plannedShuffleNextId is not null &&
-            _items.All(x => x.Id != _plannedShuffleNextId))
-        {
-            _plannedShuffleNextId = null;
-        }
-
-        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     public void Clear()
     {
-        _items.Clear();
-        _currentIndex = -1;
+        _userItems.Clear();
+        _radioItems.Clear();
+        _userCurrentIndex = -1;
+        _radioCurrentIndex = -1;
+        _isInRadio = false;
         _shuffleHistory.Clear();
         _plannedShuffleNextId = null;
         Changed?.Invoke(this, EventArgs.Empty);
@@ -127,19 +207,22 @@ public sealed class QueueService : IQueueService
 
     public void SetContext(IEnumerable<Song> songs, Song? startSong = null)
     {
-        _items.Clear();
-        _items.AddRange(songs);
+        _userItems.Clear();
+        _userItems.AddRange(songs);
+        _radioItems.Clear();
+        _radioCurrentIndex = -1;
+        _isInRadio = false;
         _shuffleHistory.Clear();
         _plannedShuffleNextId = null;
 
         if (startSong is not null)
         {
-            var index = _items.FindIndex(x => x.Id == startSong.Id);
-            _currentIndex = index >= 0 ? index : 0;
+            var index = _userItems.FindIndex(x => x.Id == startSong.Id);
+            _userCurrentIndex = index >= 0 ? index : 0;
         }
         else
         {
-            _currentIndex = _items.Count > 0 ? 0 : -1;
+            _userCurrentIndex = _userItems.Count > 0 ? 0 : -1;
         }
 
         Changed?.Invoke(this, EventArgs.Empty);
@@ -147,18 +230,65 @@ public sealed class QueueService : IQueueService
 
     public void SetQueue(IEnumerable<Song> songs, int startIndex)
     {
-        _items.Clear();
-        _items.AddRange(songs);
+        _userItems.Clear();
+        _userItems.AddRange(songs);
+        _radioItems.Clear();
+        _radioCurrentIndex = -1;
+        _isInRadio = false;
         _shuffleHistory.Clear();
         _plannedShuffleNextId = null;
 
-        _currentIndex = startIndex >= 0 && startIndex < _items.Count ? startIndex : (_items.Count > 0 ? 0 : -1);
+        _userCurrentIndex = startIndex >= 0 && startIndex < _userItems.Count ? startIndex : (_userItems.Count > 0 ? 0 : -1);
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void SetRadioQueue(IEnumerable<Song> songs)
+    {
+        _radioItems.Clear();
+
+        if (_isInRadio)
+        {
+            // Current was in radio; fall back to user items.
+            _isInRadio = false;
+            _radioCurrentIndex = -1;
+            if (_userItems.Count > 0)
+                _userCurrentIndex = Math.Min(_userCurrentIndex, _userItems.Count - 1);
+            else
+                _userCurrentIndex = -1;
+        }
+
+        if (RadioEnabled)
+        {
+            _radioItems.AddRange(songs);
+        }
+
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void ToggleRadio()
+    {
+        RadioEnabled = !RadioEnabled;
+
+        if (!RadioEnabled)
+        {
+            _radioItems.Clear();
+            if (_isInRadio)
+            {
+                _isInRadio = false;
+                _radioCurrentIndex = -1;
+                if (_userItems.Count > 0)
+                    _userCurrentIndex = Math.Min(_userCurrentIndex, _userItems.Count - 1);
+                else
+                    _userCurrentIndex = -1;
+            }
+        }
+
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
     public Song? MoveNext()
     {
-        if (_items.Count == 0 || _currentIndex < 0)
+        if (Current is null)
         {
             return null;
         }
@@ -169,36 +299,68 @@ public sealed class QueueService : IQueueService
             return Current;
         }
 
-        if (ShuffleEnabled)
+        if (ShuffleEnabled && !_isInRadio)
         {
             return MoveNextShuffle();
         }
 
-        if (_currentIndex < _items.Count - 1)
+        if (!_isInRadio)
         {
-            _currentIndex++;
-            Changed?.Invoke(this, EventArgs.Empty);
-            return Current;
-        }
+            // In user items.
+            if (_userCurrentIndex < _userItems.Count - 1)
+            {
+                _userCurrentIndex++;
+                Changed?.Invoke(this, EventArgs.Empty);
+                return Current;
+            }
 
-        if (RepeatMode == RepeatMode.All)
+            // At end of user items; try radio.
+            if (_radioItems.Count > 0 && RadioEnabled)
+            {
+                _isInRadio = true;
+                _radioCurrentIndex = 0;
+                Changed?.Invoke(this, EventArgs.Empty);
+                return Current;
+            }
+
+            if (RepeatMode == RepeatMode.All)
+            {
+                _userCurrentIndex = 0;
+                Changed?.Invoke(this, EventArgs.Empty);
+                return Current;
+            }
+
+            return null;
+        }
+        else
         {
-            _currentIndex = 0;
-            Changed?.Invoke(this, EventArgs.Empty);
-            return Current;
-        }
+            // In radio items.
+            if (_radioCurrentIndex < _radioItems.Count - 1)
+            {
+                _radioCurrentIndex++;
+                Changed?.Invoke(this, EventArgs.Empty);
+                return Current;
+            }
 
-        return null;
+            if (RepeatMode == RepeatMode.All)
+            {
+                _radioCurrentIndex = 0;
+                Changed?.Invoke(this, EventArgs.Empty);
+                return Current;
+            }
+
+            return null;
+        }
     }
 
     public Song? MovePrevious()
     {
-        if (_items.Count == 0 || _currentIndex < 0)
+        if (Current is null)
         {
             return null;
         }
 
-        if (ShuffleEnabled && _shuffleHistory.Count > 0)
+        if (ShuffleEnabled && !_isInRadio && _shuffleHistory.Count > 0)
         {
             // Walk back through history skipping IDs that no longer exist.
             while (_shuffleHistory.Count > 0)
@@ -206,91 +368,162 @@ public sealed class QueueService : IQueueService
                 var previousId = _shuffleHistory[^1];
                 _shuffleHistory.RemoveAt(_shuffleHistory.Count - 1);
 
-                var previousIndex = _items.FindIndex(x => x.Id == previousId);
+                var previousIndex = _userItems.FindIndex(x => x.Id == previousId);
                 if (previousIndex >= 0)
                 {
-                    _currentIndex = previousIndex;
+                    _userCurrentIndex = previousIndex;
+                    _isInRadio = false;
                     Changed?.Invoke(this, EventArgs.Empty);
                     return Current;
                 }
             }
         }
 
-        if (_currentIndex > 0)
+        if (_isInRadio)
         {
-            _currentIndex--;
-            Changed?.Invoke(this, EventArgs.Empty);
-            return Current;
-        }
+            // In radio items.
+            if (_radioCurrentIndex > 0)
+            {
+                _radioCurrentIndex--;
+                Changed?.Invoke(this, EventArgs.Empty);
+                return Current;
+            }
 
-        if (RepeatMode == RepeatMode.All)
+            // Go back to last user item.
+            if (_userItems.Count > 0)
+            {
+                _isInRadio = false;
+                _userCurrentIndex = _userItems.Count - 1;
+                Changed?.Invoke(this, EventArgs.Empty);
+                return Current;
+            }
+
+            if (RepeatMode == RepeatMode.All)
+            {
+                _radioCurrentIndex = _radioItems.Count - 1;
+                Changed?.Invoke(this, EventArgs.Empty);
+                return Current;
+            }
+
+            return null;
+        }
+        else
         {
-            _currentIndex = _items.Count - 1;
-            Changed?.Invoke(this, EventArgs.Empty);
-            return Current;
-        }
+            // In user items.
+            if (_userCurrentIndex > 0)
+            {
+                _userCurrentIndex--;
+                Changed?.Invoke(this, EventArgs.Empty);
+                return Current;
+            }
 
-        return null;
+            if (RepeatMode == RepeatMode.All)
+            {
+                _userCurrentIndex = _userItems.Count > 0 ? _userItems.Count - 1 : -1;
+                Changed?.Invoke(this, EventArgs.Empty);
+                return Current;
+            }
+
+            return null;
+        }
     }
 
     public Song? PeekNext()
     {
-        if (_items.Count == 0 || _currentIndex < 0)
-        {
-            return null;
-        }
+        if (Current is null) return null;
 
         if (RepeatMode == RepeatMode.One)
         {
             return Current;
         }
 
-        if (ShuffleEnabled)
+        if (ShuffleEnabled && !_isInRadio)
         {
             return PeekNextShuffle();
         }
 
-        if (_currentIndex < _items.Count - 1)
+        if (!_isInRadio)
         {
-            return _items[_currentIndex + 1];
-        }
+            if (_userCurrentIndex < _userItems.Count - 1)
+            {
+                return _userItems[_userCurrentIndex + 1];
+            }
 
-        if (RepeatMode == RepeatMode.All)
+            if (_radioItems.Count > 0 && RadioEnabled)
+            {
+                return _radioItems[0];
+            }
+
+            if (RepeatMode == RepeatMode.All)
+            {
+                return _userItems.Count > 0 ? _userItems[0] : null;
+            }
+
+            return null;
+        }
+        else
         {
-            return _items[0];
-        }
+            if (_radioCurrentIndex < _radioItems.Count - 1)
+            {
+                return _radioItems[_radioCurrentIndex + 1];
+            }
 
-        return null;
+            if (RepeatMode == RepeatMode.All)
+            {
+                return _radioItems.Count > 0 ? _radioItems[0] : null;
+            }
+
+            return null;
+        }
     }
 
     public Song? PeekPlannedNext()
     {
-        if (_items.Count == 0 || _currentIndex < 0)
-        {
-            return null;
-        }
+        if (Current is null) return null;
 
         if (RepeatMode == RepeatMode.One)
         {
             return Current;
         }
 
-        if (ShuffleEnabled)
+        if (ShuffleEnabled && !_isInRadio)
         {
             return PeekPlannedNextShuffle();
         }
 
-        if (_currentIndex < _items.Count - 1)
+        if (!_isInRadio)
         {
-            return _items[_currentIndex + 1];
-        }
+            if (_userCurrentIndex < _userItems.Count - 1)
+            {
+                return _userItems[_userCurrentIndex + 1];
+            }
 
-        if (RepeatMode == RepeatMode.All)
+            if (_radioItems.Count > 0 && RadioEnabled)
+            {
+                return _radioItems[0];
+            }
+
+            if (RepeatMode == RepeatMode.All)
+            {
+                return _userItems.Count > 0 ? _userItems[0] : null;
+            }
+
+            return null;
+        }
+        else
         {
-            return _items[0];
-        }
+            if (_radioCurrentIndex < _radioItems.Count - 1)
+            {
+                return _radioItems[_radioCurrentIndex + 1];
+            }
 
-        return null;
+            if (RepeatMode == RepeatMode.All)
+            {
+                return _radioItems.Count > 0 ? _radioItems[0] : null;
+            }
+
+            return null;
+        }
     }
 
     public void SetShuffle(bool enabled)
@@ -338,10 +571,25 @@ public sealed class QueueService : IQueueService
 
     private Song? MoveNextShuffle()
     {
-        if (_items.Count == 1)
+        // Only operates on user items; radio stays linear.
+        if (_userItems.Count == 0)
+        {
+            return null;
+        }
+
+        if (_userItems.Count == 1)
         {
             if (RepeatMode is RepeatMode.One or RepeatMode.All)
             {
+                Changed?.Invoke(this, EventArgs.Empty);
+                return Current;
+            }
+
+            // Only one user item; try radio.
+            if (_radioItems.Count > 0 && RadioEnabled)
+            {
+                _isInRadio = true;
+                _radioCurrentIndex = 0;
                 Changed?.Invoke(this, EventArgs.Empty);
                 return Current;
             }
@@ -357,10 +605,10 @@ public sealed class QueueService : IQueueService
 
         if (_plannedShuffleNextId is not null)
         {
-            var plannedIndex = _items.FindIndex(x => x.Id == _plannedShuffleNextId);
-            if (plannedIndex >= 0 && plannedIndex != _currentIndex)
+            var plannedIndex = _userItems.FindIndex(x => x.Id == _plannedShuffleNextId);
+            if (plannedIndex >= 0 && plannedIndex != _userCurrentIndex)
             {
-                _currentIndex = plannedIndex;
+                _userCurrentIndex = plannedIndex;
                 _plannedShuffleNextId = null;
                 Changed?.Invoke(this, EventArgs.Empty);
                 return Current;
@@ -369,42 +617,40 @@ public sealed class QueueService : IQueueService
         }
 
         var candidates = Enumerable
-            .Range(0, _items.Count)
-            .Where(x => x != _currentIndex)
+            .Range(0, _userItems.Count)
+            .Where(x => x != _userCurrentIndex)
             .ToList();
 
-        _currentIndex = candidates[_random.Next(candidates.Count)];
+        _userCurrentIndex = candidates[_random.Next(candidates.Count)];
         Changed?.Invoke(this, EventArgs.Empty);
         return Current;
     }
 
     private Song? PeekNextShuffle()
     {
-        if (_items.Count == 0 || _currentIndex < 0)
+        if (_userItems.Count == 0 || _userCurrentIndex < 0)
         {
             return null;
         }
 
-        if (_items.Count == 1)
+        if (_userItems.Count == 1)
         {
             return RepeatMode is RepeatMode.One or RepeatMode.All ? Current : null;
         }
 
-        // Use planned next if available (e.g. from AddNext in shuffle mode).
         if (_plannedShuffleNextId is not null)
         {
-            var plannedIndex = _items.FindIndex(x => x.Id == _plannedShuffleNextId);
-            if (plannedIndex >= 0 && plannedIndex != _currentIndex)
+            var plannedIndex = _userItems.FindIndex(x => x.Id == _plannedShuffleNextId);
+            if (plannedIndex >= 0 && plannedIndex != _userCurrentIndex)
             {
-                return _items[plannedIndex];
+                return _userItems[plannedIndex];
             }
             _plannedShuffleNextId = null;
         }
 
-        // Pure peek: pick a random candidate without storing it as planned.
         var candidates = Enumerable
-            .Range(0, _items.Count)
-            .Where(x => x != _currentIndex)
+            .Range(0, _userItems.Count)
+            .Where(x => x != _userCurrentIndex)
             .ToList();
 
         if (candidates.Count == 0)
@@ -412,36 +658,34 @@ public sealed class QueueService : IQueueService
             return null;
         }
 
-        return _items[candidates[_random.Next(candidates.Count)]];
+        return _userItems[candidates[_random.Next(candidates.Count)]];
     }
 
     private Song? PeekPlannedNextShuffle()
     {
-        if (_items.Count == 0 || _currentIndex < 0)
+        if (_userItems.Count == 0 || _userCurrentIndex < 0)
         {
             return null;
         }
 
-        if (_items.Count == 1)
+        if (_userItems.Count == 1)
         {
             return RepeatMode is RepeatMode.One or RepeatMode.All ? Current : null;
         }
 
-        // Return existing planned next if still valid.
         if (_plannedShuffleNextId is not null)
         {
-            var plannedIndex = _items.FindIndex(x => x.Id == _plannedShuffleNextId);
-            if (plannedIndex >= 0 && plannedIndex != _currentIndex)
+            var plannedIndex = _userItems.FindIndex(x => x.Id == _plannedShuffleNextId);
+            if (plannedIndex >= 0 && plannedIndex != _userCurrentIndex)
             {
-                return _items[plannedIndex];
+                return _userItems[plannedIndex];
             }
             _plannedShuffleNextId = null;
         }
 
-        // Plan a new next track and return it.
         var candidates = Enumerable
-            .Range(0, _items.Count)
-            .Where(x => x != _currentIndex)
+            .Range(0, _userItems.Count)
+            .Where(x => x != _userCurrentIndex)
             .ToList();
 
         if (candidates.Count == 0)
@@ -450,7 +694,7 @@ public sealed class QueueService : IQueueService
         }
 
         var nextIndex = candidates[_random.Next(candidates.Count)];
-        _plannedShuffleNextId = _items[nextIndex].Id;
-        return _items[nextIndex];
+        _plannedShuffleNextId = _userItems[nextIndex].Id;
+        return _userItems[nextIndex];
     }
 }

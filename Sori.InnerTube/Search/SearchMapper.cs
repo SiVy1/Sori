@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using System.Text.RegularExpressions;
+using Sori.Core.Enums;
 using Sori.Core.Models;
 
 namespace InnerTube.Search;
@@ -51,6 +52,59 @@ public sealed class SearchMapper
             Albums = DistinctById(albums, x => x.Id),
             Artists = DistinctById(artists, x => x.Id),
             Playlists = DistinctById(playlists, x => x.Id)
+        };
+    }
+
+    public SearchResponse MapContinuation(string query, JsonElement root)
+    {
+        return Map(query, root);
+    }
+
+    public static SearchResponse MergeForFilter(
+        SearchResponse first,
+        SearchResponse second,
+        SearchFilter filter,
+        int limit)
+    {
+        var songs = first.Songs;
+        var albums = first.Albums;
+        var artists = first.Artists;
+        var playlists = first.Playlists;
+
+        switch (filter)
+        {
+            case SearchFilter.Songs:
+                songs = DistinctById(first.Songs.Concat(second.Songs), x => x.Id).Take(limit).ToList();
+                break;
+            case SearchFilter.Albums:
+                albums = DistinctById(first.Albums.Concat(second.Albums), x => x.Id).Take(limit).ToList();
+                break;
+            case SearchFilter.Artists:
+                artists = DistinctById(first.Artists.Concat(second.Artists), x => x.Id).Take(limit).ToList();
+                break;
+            case SearchFilter.Playlists:
+                playlists = DistinctById(first.Playlists.Concat(second.Playlists), x => x.Id).Take(limit).ToList();
+                break;
+        }
+
+        return new SearchResponse
+        {
+            Songs = songs,
+            Albums = albums,
+            Artists = artists,
+            Playlists = playlists
+        };
+    }
+
+    public static int CountForFilter(SearchResponse response, SearchFilter filter)
+    {
+        return filter switch
+        {
+            SearchFilter.Songs => response.Songs.Count,
+            SearchFilter.Albums => response.Albums.Count,
+            SearchFilter.Artists => response.Artists.Count,
+            SearchFilter.Playlists => response.Playlists.Count,
+            _ => response.TotalCount
         };
     }
 

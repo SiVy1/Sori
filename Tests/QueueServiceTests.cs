@@ -224,4 +224,118 @@ public class QueueServiceTests
 
         Assert.Equal("B", planned?.Title);
     }
+
+    [Fact]
+    public void SetRadioQueue_AddsItemsAfterUserQueue()
+    {
+        var queue = new QueueService();
+        queue.SetQueue([new Song { Id = "1", Title = "A" }, new Song { Id = "2", Title = "B" }], 0);
+        queue.SetRadioQueue([new Song { Id = "3", Title = "C" }, new Song { Id = "4", Title = "D" }]);
+
+        Assert.Equal(4, queue.Items.Count);
+        Assert.Equal("A", queue.Items[0].Title);
+        Assert.Equal("C", queue.Items[2].Title);
+    }
+
+    [Fact]
+    public void MoveNext_AtEndOfUserQueue_GoesToRadio()
+    {
+        var queue = new QueueService();
+        queue.SetQueue([new Song { Id = "1", Title = "A" }], 0);
+        queue.SetRadioQueue([new Song { Id = "2", Title = "B" }]);
+
+        var next = queue.MoveNext();
+        Assert.Equal("B", next?.Title);
+    }
+
+    [Fact]
+    public void AddNext_AddsBeforeRadioItems()
+    {
+        var queue = new QueueService();
+        queue.SetQueue([new Song { Id = "1", Title = "A" }], 0);
+        queue.SetRadioQueue([new Song { Id = "2", Title = "B" }]);
+        queue.AddNext(new Song { Id = "3", Title = "C" });
+
+        Assert.Equal("C", queue.Items[1].Title);
+        Assert.Equal("B", queue.Items[2].Title);
+    }
+
+    [Fact]
+    public void ToggleRadio_Off_ClearsRadioItems()
+    {
+        var queue = new QueueService();
+        queue.SetQueue([new Song { Id = "1", Title = "A" }], 0);
+        queue.SetRadioQueue([new Song { Id = "2", Title = "B" }]);
+        queue.ToggleRadio();
+
+        Assert.False(queue.RadioEnabled);
+        Assert.Single(queue.Items);
+    }
+
+    [Fact]
+    public void MovePrevious_FromRadio_GoesToLastUserItem()
+    {
+        var queue = new QueueService();
+        queue.SetQueue([new Song { Id = "1", Title = "A" }], 0);
+        queue.SetRadioQueue([new Song { Id = "2", Title = "B" }]);
+        queue.MoveNext(); // to radio
+
+        var prev = queue.MovePrevious();
+        Assert.Equal("A", prev?.Title);
+    }
+
+    [Fact]
+    public void AddNext_AllowsDuplicates()
+    {
+        var queue = new QueueService();
+        queue.SetQueue([new Song { Id = "1", Title = "A" }], 0);
+
+        queue.AddNext(new Song { Id = "1", Title = "A" });
+        queue.AddNext(new Song { Id = "1", Title = "A" });
+
+        Assert.Equal(3, queue.Items.Count);
+        Assert.Equal("A", queue.Items[1].Title);
+        Assert.Equal("A", queue.Items[2].Title);
+    }
+
+    [Fact]
+    public void AddToTheEnd_AllowsDuplicates()
+    {
+        var queue = new QueueService();
+        queue.SetQueue([new Song { Id = "1", Title = "A" }], 0);
+
+        queue.AddToTheEnd(new Song { Id = "1", Title = "A" });
+        queue.AddToTheEnd(new Song { Id = "1", Title = "A" });
+
+        Assert.Equal(3, queue.Items.Count);
+    }
+
+    [Fact]
+    public void PlayNow_AllowsDuplicates()
+    {
+        var queue = new QueueService();
+        queue.SetQueue([new Song { Id = "1", Title = "A" }], 0);
+
+        queue.PlayNow(new Song { Id = "1", Title = "A" });
+
+        Assert.Equal(2, queue.Items.Count);
+        Assert.Equal(0, queue.CurrentIndex);
+    }
+
+    [Fact]
+    public void Remove_RemovesOnlyFirstOccurrence()
+    {
+        var queue = new QueueService();
+        queue.SetQueue([
+            new Song { Id = "1", Title = "A" },
+            new Song { Id = "1", Title = "A" },
+            new Song { Id = "2", Title = "B" }
+        ], 0);
+
+        queue.Remove(new Song { Id = "1", Title = "A" });
+
+        Assert.Equal(2, queue.Items.Count);
+        Assert.Equal("A", queue.Items[0].Title); // second A still there
+        Assert.Equal("B", queue.Items[1].Title);
+    }
 }

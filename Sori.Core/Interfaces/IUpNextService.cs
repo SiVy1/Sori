@@ -2,9 +2,9 @@ using Sori.Core.Models;
 
 namespace Sori.Core.Interfaces;
 
-public interface ISearchService
+public interface IUpNextService
 {
-    Task<SearchResponse> SearchAsync(
-        SearchRequest request,
+    Task<UpNextResponse> GetUpNextAsync(
+        Song song,
         CancellationToken cancellationToken = default);
 }

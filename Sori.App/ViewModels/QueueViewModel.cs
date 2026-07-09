@@ -30,6 +30,7 @@ public partial class QueueViewModel : ObservableObject
 
         ToggleShuffleCommand = new RelayCommand(ToggleShuffle);
         CycleRepeatModeCommand = new RelayCommand(CycleRepeatMode);
+        ToggleRadioCommand = new RelayCommand(ToggleRadio);
 
         SyncQueueFromService();
         NotifyQueuePropertiesChanged();
@@ -37,6 +38,7 @@ public partial class QueueViewModel : ObservableObject
 
     public ObservableCollection<Song> Queue { get; } = new();
     public ObservableCollection<Song> UpNextItems { get; } = new();
+    public ObservableCollection<Song> RadioItems { get; } = new();
 
     public bool ShuffleEnabled => _queueService.ShuffleEnabled;
 
@@ -51,6 +53,14 @@ public partial class QueueViewModel : ObservableObject
     };
 
     public string ShuffleText => ShuffleEnabled ? "Shuffle On" : "Shuffle Off";
+
+    public bool RadioEnabled => _queueService.RadioEnabled;
+
+    public string RadioText => RadioEnabled ? "Radio On" : "Radio Off";
+
+    public bool IsRadioActive => RadioEnabled;
+
+    public bool HasRadioItems => RadioItems.Count > 0;
 
     public bool CanGoNext => _queueService.Items.Count > 0;
 
@@ -74,11 +84,13 @@ public partial class QueueViewModel : ObservableObject
 
     public IRelayCommand ToggleShuffleCommand { get; }
     public IRelayCommand CycleRepeatModeCommand { get; }
+    public IRelayCommand ToggleRadioCommand { get; }
 
     private void SyncQueueFromService()
     {
         Queue.Clear();
         UpNextItems.Clear();
+        RadioItems.Clear();
 
         foreach (var song in _queueService.Items) Queue.Add(song);
 
@@ -88,14 +100,38 @@ public partial class QueueViewModel : ObservableObject
             var idx = Queue.Select((s, i) => (s, i)).FirstOrDefault(x => x.s.Id == current.Id).i;
             QueueCurrentIndex = idx;
 
-            for (int i = idx + 1; i < Queue.Count; i++)
+            var userCount = _queueService.UserItemCount;
+
+            if (idx < userCount)
             {
-                UpNextItems.Add(Queue[i]);
+                // Current is in user queue
+                for (int i = idx + 1; i < userCount && i < Queue.Count; i++)
+                {
+                    UpNextItems.Add(Queue[i]);
+                }
+                for (int i = userCount; i < Queue.Count; i++)
+                {
+                    RadioItems.Add(Queue[i]);
+                }
+            }
+            else
+            {
+                // Current is in radio queue
+                for (int i = idx + 1; i < Queue.Count; i++)
+                {
+                    RadioItems.Add(Queue[i]);
+                }
             }
         }
         else
         {
             QueueCurrentIndex = -1;
+            // No current playing; show all radio items
+            var userCount = _queueService.UserItemCount;
+            for (int i = userCount; i < Queue.Count; i++)
+            {
+                RadioItems.Add(Queue[i]);
+            }
         }
 
         OnPropertyChanged(nameof(QueueIndexText));
@@ -111,6 +147,10 @@ public partial class QueueViewModel : ObservableObject
         OnPropertyChanged(nameof(RepeatMode));
         OnPropertyChanged(nameof(RepeatModeText));
         OnPropertyChanged(nameof(ShuffleText));
+        OnPropertyChanged(nameof(RadioEnabled));
+        OnPropertyChanged(nameof(RadioText));
+        OnPropertyChanged(nameof(IsRadioActive));
+        OnPropertyChanged(nameof(HasRadioItems));
         OnPropertyChanged(nameof(NowPlayingItem));
         OnPropertyChanged(nameof(IsQueueEmpty));
         OnPropertyChanged(nameof(IsNowPlayingVisible));
@@ -125,6 +165,12 @@ public partial class QueueViewModel : ObservableObject
     private void CycleRepeatMode()
     {
         _queueService.CycleRepeatMode();
+        NotifyQueuePropertiesChanged();
+    }
+
+    private void ToggleRadio()
+    {
+        _queueService.ToggleRadio();
         NotifyQueuePropertiesChanged();
     }
 }

@@ -9,6 +9,7 @@ using Avalonia.Markup.Xaml;
 using InnerTube;
 using InnerTube.Browse;
 using InnerTube.Home;
+using InnerTube.Next;
 using InnerTube.Search;
 using Sori.Core.Interfaces;
 using Sori.Playback;
@@ -36,6 +37,7 @@ public class App : Application
             ISearchService searchService;
             ICollectionService collectionService;
             IHomeService homeService;
+            IUpNextService upNextService;
 
             if (useInnerTube)
             {
@@ -54,12 +56,18 @@ public class App : Application
                     innerTubeClient,
                     contextFactory,
                     new HomeMapper());
+
+                upNextService = new InnerTubeUpNextService(
+                    innerTubeClient,
+                    contextFactory,
+                    new NextMapper());
             }
             else
             {
                 searchService = new MockMusicClient();
                 collectionService = new MockCollectionService();
                 homeService = new MockHomeService();
+                upNextService = new MockUpNextService();
             }
 
             IQueueService queueService = new QueueService();
@@ -82,6 +90,7 @@ public class App : Application
                 queueService,
                 collectionService,
                 homeService,
+                upNextService,
                 playbackCoordinator,
                 prefetchResolver);
             desktop.MainWindow = new MainWindow { DataContext = viewModel };
