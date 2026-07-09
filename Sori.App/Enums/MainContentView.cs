@@ -2,7 +2,7 @@ namespace App.Enums;
 
 public enum MainContentView
 {
-    Search,
+    Home,
     CollectionDetail,
     ArtistDetail
 }

@@ -152,6 +152,7 @@ public sealed class BrowseMapper
         song = new Song
         {
             Id = $"youtubeMusic:track:{videoId}",
+            SourceId = videoId,
             Title = title,
             ArtistName = artistName,
             AlbumTitle = albumTitle,
@@ -363,6 +364,7 @@ public sealed class BrowseMapper
         song = new Song
         {
             Id = $"youtubeMusic:track:{videoId}",
+            SourceId = videoId,
             Title = title,
             ArtistName = artist,
             AlbumTitle = album,
@@ -475,6 +477,7 @@ public sealed class BrowseMapper
         song = new Song
         {
             Id = $"youtubeMusic:track:{videoId}",
+            SourceId = videoId,
             Title = title,
             ArtistName = artist,
             AlbumTitle = sourceAlbum.Title,

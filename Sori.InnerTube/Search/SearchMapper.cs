@@ -203,6 +203,7 @@ public sealed class SearchMapper
         song = new Song
         {
             Id = $"youtubeMusic:track:{videoId}",
+            SourceId = videoId,
             Title = title,
             ArtistName = artistName ?? "",
             AlbumTitle = albumTitle,

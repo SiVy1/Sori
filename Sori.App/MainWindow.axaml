@@ -1,394 +1,340 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:conv="clr-namespace:App.Converters"
+        xmlns:ctrl="clr-namespace:App.Controls"
         x:Class="App.MainWindow"
         Width="1180"
         Height="760"
         MinWidth="980"
         MinHeight="640"
-        Background="#111214"
-        Title="Sori">
+        Background="#0A0A0C"
+        Title="Sori"
+        KeyboardNavigation.TabNavigation="None">
+
+    <Window.Resources>
+        <conv:UrlToBitmapConverter x:Key="UrlBitmap" />
+    </Window.Resources>
 
     <Window.Styles>
         <Style Selector="TextBlock">
             <Setter Property="FontFamily" Value="Inter, Segoe UI, Arial" />
+            <Setter Property="Foreground" Value="#E8E8E8" />
         </Style>
 
-        <Style Selector="Button">
-            <Setter Property="Background" Value="#18191D" />
-            <Setter Property="Foreground" Value="#F2F2F2" />
-            <Setter Property="BorderBrush" Value="#2A2B31" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="10" />
-            <Setter Property="Padding" Value="14,8" />
+        <!-- Compact slider -->
+        <Style Selector="Slider">
+            <Setter Property="MinHeight" Value="12" />
+            <Setter Property="Margin" Value="0" />
+        </Style>
+        <Style Selector="Slider /template/ Track">
+            <Setter Property="MinHeight" Value="3" />
+        </Style>
+        <Style Selector="Slider /template/ Thumb">
+            <Setter Property="Width" Value="10" />
+            <Setter Property="Height" Value="10" />
+            <Setter Property="CornerRadius" Value="5" />
         </Style>
 
-        <Style Selector="TextBox">
-            <Setter Property="Background" Value="#18191D" />
-            <Setter Property="Foreground" Value="#F2F2F2" />
-            <Setter Property="BorderBrush" Value="#2A2B31" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="10" />
-            <Setter Property="Padding" Value="14,0" />
-            <Setter Property="FontSize" Value="14" />
-        </Style>
-
-        <Style Selector="ListBox">
+        <!-- Player buttons: no focus rect, subtle hover -->
+        <Style Selector="Button.player-btn">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="2" />
+            <Setter Property="Focusable" Value="False" />
+        </Style>
+        <Style Selector="Button.player-btn:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="Button.player-btn:focus /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
         </Style>
     </Window.Styles>
 
-    <Grid RowDefinitions="Auto,*,92"
-          ColumnDefinitions="230,*,340">
+    <Grid RowDefinitions="*,Auto"
+          ColumnDefinitions="*,300">
 
-        <!-- Sidebar -->
-        <Border Grid.RowSpan="3"
-                Grid.Column="0"
-                BorderBrush="#25262B"
-                BorderThickness="0,0,1,0"
-                Padding="24">
-
-            <Grid RowDefinitions="Auto,*,Auto">
-                <StackPanel Spacing="4">
-                    <TextBlock Text="Sori"
-                               FontSize="24"
-                               FontWeight="SemiBold"
-                               Foreground="#F2F2F2" />
-
-                    <TextBlock Text="minimal music client"
-                               FontSize="12"
-                               Foreground="#77777D" />
-                </StackPanel>
-
-                <StackPanel Grid.Row="1"
-                            Margin="0,42,0,0"
-                            Spacing="10">
-
-                    <Border Background="#1B1C21"
-                            CornerRadius="10"
-                            Padding="12,10">
-                        <TextBlock Text="Home"
-                                   Foreground="#A78BFA"
-                                   FontWeight="SemiBold" />
-                    </Border>
-
-                    <TextBlock Text="Search"
-                               Foreground="#CFCFD4"
-                               Margin="12,8" />
-
-                    <TextBlock Text="Library"
-                               Foreground="#CFCFD4"
-                               Margin="12,8" />
-
-                    <TextBlock Text="Playlists"
-                               Foreground="#CFCFD4"
-                               Margin="12,8" />
-
-                    <TextBlock Text="Now Playing"
-                               Foreground="#CFCFD4"
-                               Margin="12,8" />
-                </StackPanel>
-
-                <TextBlock Grid.Row="2"
-                           Text="Settings"
-                           Foreground="#77777D"
-                           Margin="12,0,0,8" />
-            </Grid>
-        </Border>
-
-        <!-- Top search -->
+        <!-- Modal overlay -->
         <Border Grid.Row="0"
-                Grid.Column="1"
                 Grid.ColumnSpan="2"
-                BorderBrush="#25262B"
-                BorderThickness="0,0,0,1"
-                Padding="28,22">
+                Background="#00000080"
+                IsVisible="{Binding IsModalOpen}"
+                ZIndex="100">
+            <Grid>
+                <Border Width="640"
+                        MaxHeight="560"
+                        Margin="0,80,0,0"
+                        VerticalAlignment="Top"
+                        HorizontalAlignment="Center"
+                        Background="#111113"
+                        BorderBrush="#2A2A2C"
+                        BorderThickness="1"
+                        CornerRadius="12"
+                        BoxShadow="0 8 32 0 #00000080">
+                    <Grid RowDefinitions="Auto,Auto,*">
+                        <!-- Search input -->
+                        <Grid ColumnDefinitions="Auto,*,Auto"
+                              Margin="16,10,16,0"
+                              VerticalAlignment="Center">
+                            <TextBlock Text="⌘"
+                                       Foreground="#666668"
+                                       FontSize="14"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,6,0"
+                                       IsVisible="{Binding !IsCommandMode}" />
+                            <TextBlock Text="›"
+                                       Foreground="#A78BFA"
+                                       FontSize="16"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,6,0"
+                                       IsVisible="{Binding IsCommandMode}" />
+                            <TextBox x:Name="ModalSearchBox"
+                                     Grid.Column="1"
+                                     Height="22"
+                                     Watermark="Search or type &gt; for commands..."
+                                     Text="{Binding SearchQuery}"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     Padding="0"
+                                     FontSize="14"
+                                     VerticalContentAlignment="Center"
+                                     Foreground="#FFFFFF" />
+                            <Button Grid.Column="2"
+                                    Content="Search"
+                                    Height="22"
+                                    Command="{Binding SearchCommand}"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Foreground="#88888A"
+                                    Padding="4,0"
+                                    FontSize="12"
+                                    VerticalAlignment="Center"
+                                    IsVisible="{Binding !IsCommandMode}" />
+                        </Grid>
 
-            <Grid ColumnDefinitions="*,Auto">
-                <TextBox Width="460"
-                         Height="42"
-                         HorizontalAlignment="Left"
-                         Watermark="Search songs, artists, albums..."
-                         Text="{Binding SearchQuery}" />
+                        <!-- Command palette hint -->
+                        <Border Grid.Row="1"
+                                IsVisible="{Binding IsCommandMode}"
+                                Background="#1A1A1C"
+                                Padding="16,8"
+                                Margin="0,8,0,0">
+                            <TextBlock Text="Command mode"
+                                       Foreground="#A78BFA"
+                                       FontSize="12"
+                                       FontWeight="SemiBold" />
+                        </Border>
 
-                <Button Grid.Column="1"
-                        Content="Search"
-                        Height="42"
-                        Command="{Binding SearchCommand}" />
+                        <!-- Results -->
+                        <Grid Grid.Row="2"
+                              Margin="16,8,16,16"
+                              RowDefinitions="Auto,*">
+
+                            <!-- Command suggestions -->
+                            <StackPanel Grid.Row="0"
+                                        IsVisible="{Binding IsCommandMode}"
+                                        Spacing="4">
+                                <TextBlock Text="Commands"
+                                           FontSize="11"
+                                           Foreground="#666668"
+                                           Margin="0,0,0,4" />
+                                <TextBlock Text="home    - Go to home"
+                                           Foreground="#88888A"
+                                           FontSize="13" />
+                                <TextBlock Text="search  - Search music"
+                                           Foreground="#88888A"
+                                           FontSize="13" />
+                                <TextBlock Text="queue   - Show queue"
+                                           Foreground="#88888A"
+                                           FontSize="13" />
+                                <TextBlock Text="play    - Play / pause"
+                                           Foreground="#88888A"
+                                           FontSize="13" />
+                                <TextBlock Text="next    - Next track"
+                                           Foreground="#88888A"
+                                           FontSize="13" />
+                                <TextBlock Text="prev    - Previous track"
+                                           Foreground="#88888A"
+                                           FontSize="13" />
+                            </StackPanel>
+
+                            <!-- Unified search results with keyboard nav -->
+                            <ListBox x:Name="ModalListBox"
+                                     Grid.Row="1"
+                                     ItemsSource="{Binding ModalItems}"
+                                     SelectedIndex="{Binding ModalSelectedIndex, Mode=TwoWay}"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     IsVisible="{Binding ModalItems.Count, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                <ListBox.Styles>
+                                    <Style Selector="ListBoxItem">
+                                        <Setter Property="Padding" Value="8,6" />
+                                        <Setter Property="Margin" Value="0,2" />
+                                        <Setter Property="Background" Value="Transparent" />
+                                        <Setter Property="Focusable" Value="True" />
+                                    </Style>
+                                    <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+                                        <Setter Property="Background" Value="#1A1A1C" />
+                                    </Style>
+                                    <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+                                        <Setter Property="Background" Value="#222223" />
+                                    </Style>
+                                </ListBox.Styles>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid ColumnDefinitions="36,*,Auto">
+                                            <Image Width="36"
+                                                   Height="36"
+                                                   Stretch="UniformToFill"
+                                                   Source="{Binding ThumbnailUrl, Converter={StaticResource UrlBitmap}}" />
+                                            <StackPanel Grid.Column="1"
+                                                        Margin="10,0,0,0"
+                                                        VerticalAlignment="Center"
+                                                        Spacing="1">
+                                                <TextBlock Text="{Binding Title}"
+                                                           Foreground="#E8E8E8"
+                                                           FontSize="13"
+                                                           FontWeight="SemiBold" />
+                                                <TextBlock Text="{Binding Subtitle}"
+                                                           Foreground="#88888A"
+                                                           FontSize="11" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="2"
+                                                       Text="{Binding Kind}"
+                                                       Foreground="#666668"
+                                                       FontSize="10"
+                                                       VerticalAlignment="Center"
+                                                       Margin="12,0" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                        </Grid>
+                    </Grid>
+                </Border>
             </Grid>
         </Border>
 
-        <!-- Search results -->
-        <ScrollViewer Grid.Row="1"
-                      Grid.Column="1"
-                      Margin="0,30,0,0"
-                      IsVisible="{Binding IsSearchView}">
-            <StackPanel Spacing="24">
+        <!-- Home -->
+        <ScrollViewer Grid.Row="0"
+                      Grid.Column="0"
+                      Margin="24,24,24,0"
+                      IsVisible="{Binding IsHomeView}">
+            <StackPanel Spacing="32">
+                <TextBlock Text="Home"
+                           FontSize="24"
+                           FontWeight="Bold"
+                           Foreground="#FFFFFF" />
 
-                <!-- Songs -->
-                <StackPanel IsVisible="{Binding HasSongs}">
-                    <TextBlock Text="Songs"
-                               FontSize="18"
-                               FontWeight="SemiBold"
-                               Foreground="#F2F2F2"
-                               Margin="0,0,0,12" />
+                <TextBlock Text="Loading..."
+                           IsVisible="{Binding IsHomeLoading}"
+                           Foreground="#666668" />
 
-                    <ItemsControl ItemsSource="{Binding SearchSongs}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Background="#18191D"
-                                        BorderBrush="#2A2B31"
-                                        BorderThickness="1"
-                                        CornerRadius="12"
-                                        Padding="14"
-                                        Margin="0,0,0,10">
-                                    <Grid ColumnDefinitions="46,*,Auto,Auto">
-                                        <Border Width="46"
-                                                Height="46"
-                                                CornerRadius="8"
-                                                Background="#24252B">
-                                            <TextBlock Text="♪"
-                                                       HorizontalAlignment="Center"
-                                                       VerticalAlignment="Center"
-                                                       Foreground="#A78BFA"
-                                                       FontSize="20" />
-                                        </Border>
+                <TextBlock Text="{Binding HomeError}"
+                           Foreground="Tomato"
+                           IsVisible="{Binding HomeError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
-                                        <StackPanel Grid.Column="1"
-                                                    Margin="14,0,0,0"
-                                                    VerticalAlignment="Center"
-                                                    Spacing="3">
-                                            <TextBlock Text="{Binding Title}"
-                                                       Foreground="#F2F2F2"
-                                                       FontSize="15"
-                                                       FontWeight="SemiBold" />
-                                            <TextBlock Text="{Binding ArtistName}"
-                                                       Foreground="#9A9AA0"
-                                                       FontSize="13" />
-                                        </StackPanel>
-
-                                        <TextBlock Grid.Column="2"
-                                                   Text="{Binding AlbumTitle}"
-                                                   Foreground="#77777D"
-                                                   FontSize="13"
-                                                   VerticalAlignment="Center" />
-
-                                        <Button Grid.Column="3"
-                                                Content="Play"
-                                                Margin="16,0,0,0"
-                                                Command="{Binding DataContext.PlaySongCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                CommandParameter="{Binding}" />
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-
-                <!-- Albums -->
-                <StackPanel IsVisible="{Binding HasAlbums}">
-                    <TextBlock Text="Albums"
-                               FontSize="18"
-                               FontWeight="SemiBold"
-                               Foreground="#F2F2F2"
-                               Margin="0,0,0,12" />
-
-                    <ItemsControl ItemsSource="{Binding SearchAlbums}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Button Command="{Binding DataContext.OpenAlbumCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                        CommandParameter="{Binding}"
-                                        HorizontalAlignment="Stretch"
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        Padding="0">
-                                    <Border Background="#18191D"
-                                            BorderBrush="#2A2B31"
-                                            BorderThickness="1"
-                                            CornerRadius="12"
-                                            Padding="14"
-                                            Margin="0,0,0,10">
-                                        <Grid ColumnDefinitions="46,*">
-                                            <Border Width="46"
-                                                    Height="46"
-                                                    CornerRadius="8"
-                                                    Background="#24252B">
-                                                <TextBlock Text="♪"
-                                                           HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center"
-                                                           Foreground="#A78BFA"
-                                                           FontSize="20" />
-                                            </Border>
-
-                                            <StackPanel Grid.Column="1"
-                                                        Margin="14,0,0,0"
-                                                        VerticalAlignment="Center"
-                                                        Spacing="3">
-                                                <TextBlock Text="{Binding Title}"
-                                                           Foreground="#F2F2F2"
-                                                           FontSize="15"
-                                                           FontWeight="SemiBold" />
-                                                <TextBlock Text="{Binding ArtistName}"
-                                                           Foreground="#9A9AA0"
-                                                           FontSize="13" />
-                                            </StackPanel>
-                                        </Grid>
-                                    </Border>
-                                </Button>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-
-                <!-- Artists -->
-                <StackPanel IsVisible="{Binding HasArtists}">
-                    <TextBlock Text="Artists"
-                               FontSize="18"
-                               FontWeight="SemiBold"
-                               Foreground="#F2F2F2"
-                               Margin="0,0,0,12" />
-
-                    <ItemsControl ItemsSource="{Binding SearchArtists}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Button Command="{Binding DataContext.OpenArtistCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                        CommandParameter="{Binding}"
-                                        HorizontalAlignment="Stretch"
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        Padding="0">
-                                    <Border Background="#18191D"
-                                            BorderBrush="#2A2B31"
-                                            BorderThickness="1"
-                                            CornerRadius="12"
-                                            Padding="14"
-                                            Margin="0,0,0,10">
-                                        <Grid ColumnDefinitions="46,*">
-                                            <Border Width="46"
-                                                    Height="46"
-                                                    CornerRadius="8"
-                                                    Background="#24252B">
-                                                <TextBlock Text="♪"
-                                                           HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center"
-                                                           Foreground="#A78BFA"
-                                                           FontSize="20" />
-                                            </Border>
-
-                                            <TextBlock Grid.Column="1"
-                                                       Text="{Binding Name}"
-                                                       Foreground="#F2F2F2"
-                                                       FontSize="15"
-                                                       FontWeight="SemiBold"
-                                                       VerticalAlignment="Center"
-                                                       Margin="14,0,0,0" />
-                                        </Grid>
-                                    </Border>
-                                </Button>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-
-                <!-- Playlists -->
-                <StackPanel IsVisible="{Binding HasPlaylists}">
-                    <TextBlock Text="Playlists"
-                               FontSize="18"
-                               FontWeight="SemiBold"
-                               Foreground="#F2F2F2"
-                               Margin="0,0,0,12" />
-
-                    <ItemsControl ItemsSource="{Binding SearchPlaylists}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Button Command="{Binding DataContext.OpenPlaylistCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                        CommandParameter="{Binding}"
-                                        HorizontalAlignment="Stretch"
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        Padding="0">
-                                    <Border Background="#18191D"
-                                            BorderBrush="#2A2B31"
-                                            BorderThickness="1"
-                                            CornerRadius="12"
-                                            Padding="14"
-                                            Margin="0,0,0,10">
-                                        <Grid ColumnDefinitions="46,*">
-                                            <Border Width="46"
-                                                    Height="46"
-                                                    CornerRadius="8"
-                                                    Background="#24252B">
-                                                <TextBlock Text="♪"
-                                                           HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center"
-                                                           Foreground="#A78BFA"
-                                                           FontSize="20" />
-                                            </Border>
-
-                                            <TextBlock Grid.Column="1"
-                                                       Text="{Binding Title}"
-                                                       Foreground="#F2F2F2"
-                                                       FontSize="15"
-                                                       FontWeight="SemiBold"
-                                                       VerticalAlignment="Center"
-                                                       Margin="14,0,0,0" />
-                                        </Grid>
-                                    </Border>
-                                </Button>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-
+                <ItemsControl ItemsSource="{Binding HomeSections}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="{Binding Title}"
+                                           FontSize="18"
+                                           FontWeight="Bold"
+                                           Foreground="#FFFFFF" />
+                                <ItemsControl ItemsSource="{Binding Items}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <ctrl:AdaptiveGrid ItemWidth="160" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Command="{Binding DataContext.OpenHomeItemCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding}"
+                                                    HorizontalAlignment="Stretch"
+                                                    Background="Transparent"
+                                                    BorderThickness="0"
+                                                    Padding="0"
+                                                    Margin="8">
+                                                <StackPanel Spacing="8">
+                                                    <Image Width="140"
+                                                           Height="140"
+                                                           Stretch="UniformToFill"
+                                                           Source="{Binding ThumbnailUrl, Converter={StaticResource UrlBitmap}}" />
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock Text="{Binding Title}"
+                                                                   Foreground="#E8E8E8"
+                                                                   FontSize="14"
+                                                                   FontWeight="SemiBold" />
+                                                        <TextBlock Text="{Binding Subtitle}"
+                                                                   Foreground="#88888A"
+                                                                   FontSize="12" />
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
             </StackPanel>
         </ScrollViewer>
 
         <!-- Collection Detail -->
-        <ScrollViewer Grid.Row="1"
-                      Grid.Column="1"
+        <ScrollViewer Grid.Row="0"
+                      Grid.Column="0"
                       IsVisible="{Binding IsCollectionDetailView}"
-                      Margin="28,30,28,0">
-            <StackPanel Spacing="16">
+                      Margin="24,24,24,0">
+            <StackPanel Spacing="20">
 
                 <Button Content="Back"
                         Command="{Binding BackToSearchCommand}"
-                        HorizontalAlignment="Left" />
+                        HorizontalAlignment="Left"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Foreground="#88888A"
+                        Padding="0" />
 
                 <Grid ColumnDefinitions="160,*" ColumnSpacing="24">
-                    <Border Width="160"
-                            Height="160"
-                            CornerRadius="12"
-                            Background="#24252B">
-                        <TextBlock Text="♪"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   Foreground="#A78BFA"
-                                   FontSize="48" />
-                    </Border>
+                    <Image Width="160"
+                           Height="160"
+                           Stretch="UniformToFill"
+                           Source="{Binding CollectionDetail.ThumbnailUrl, Converter={StaticResource UrlBitmap}}" />
 
                     <StackPanel Grid.Column="1"
-                                VerticalAlignment="Bottom">
-                        <TextBlock Text="{Binding CollectionDetail.CollectionType}"
-                                   Opacity="0.65"
-                                   FontSize="13"
-                                   Foreground="#F2F2F2" />
+                                VerticalAlignment="Bottom"
+                                Spacing="8">
+                        <Button Content="Play All"
+                                Command="{Binding PlayCollectionCommand}"
+                                Background="#1A1A1C"
+                                BorderBrush="#2A2A2C"
+                                BorderThickness="1"
+                                Foreground="#E8E8E8"
+                                Padding="12,4"
+                                HorizontalAlignment="Left" />
 
-                        <TextBlock Text="{Binding CollectionDetail.Title}"
-                                   FontSize="32"
-                                   FontWeight="Bold"
-                                   Foreground="#F2F2F2" />
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="{Binding CollectionDetail.CollectionType}"
+                                       Foreground="#88888A"
+                                       FontSize="12" />
 
-                        <TextBlock Text="{Binding CollectionDetail.Subtitle}"
-                                   Opacity="0.75"
-                                   FontSize="14"
-                                   Foreground="#F2F2F2" />
+                            <TextBlock Text="{Binding CollectionDetail.Title}"
+                                       FontSize="32"
+                                       FontWeight="Bold"
+                                       Foreground="#FFFFFF" />
+
+                            <TextBlock Text="{Binding CollectionDetail.Subtitle}"
+                                       Foreground="#88888A"
+                                       FontSize="13" />
+                        </StackPanel>
                     </StackPanel>
                 </Grid>
 
                 <TextBlock Text="Loading tracks..."
                            IsVisible="{Binding CollectionDetail.IsLoading}"
-                           Opacity="0.65"
-                           Foreground="#F2F2F2" />
+                           Foreground="#666668" />
 
                 <TextBlock Text="{Binding CollectionDetail.Error}"
                            IsVisible="{Binding CollectionDetail.HasError}"
@@ -396,112 +342,99 @@
 
                 <TextBlock Text="Tracks"
                            FontSize="18"
-                           FontWeight="SemiBold"
-                           Foreground="#F2F2F2" />
+                           FontWeight="Bold"
+                           Foreground="#FFFFFF" />
 
                 <ItemsControl ItemsSource="{Binding CollectionDetail.Tracks}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Button Command="{Binding DataContext.PlaySongCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                            <Button Command="{Binding DataContext.PlayCollectionTrackCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                     CommandParameter="{Binding}"
                                     HorizontalAlignment="Stretch"
                                     Background="Transparent"
                                     BorderThickness="0"
-                                    Padding="0">
-                                <Border Background="#18191D"
-                                        BorderBrush="#2A2B31"
-                                        BorderThickness="1"
-                                        CornerRadius="12"
-                                        Padding="14"
-                                        Margin="0,0,0,10">
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <StackPanel>
-                                            <TextBlock Text="{Binding Title}"
-                                                       Foreground="#F2F2F2"
-                                                       FontSize="15"
-                                                       FontWeight="SemiBold" />
-                                            <TextBlock Text="{Binding ArtistName}"
-                                                       Opacity="0.65"
-                                                       FontSize="12"
-                                                       Foreground="#9A9AA0" />
-                                        </StackPanel>
+                                    Padding="0"
+                                    Margin="0,6">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Text="{Binding Title}"
+                                                   Foreground="#E8E8E8"
+                                                   FontSize="14"
+                                                   FontWeight="SemiBold" />
+                                        <TextBlock Text="{Binding ArtistName}"
+                                                   Foreground="#88888A"
+                                                   FontSize="12" />
+                                    </StackPanel>
 
-                                        <TextBlock Grid.Column="1"
-                                                   Text="{Binding Duration}"
-                                                   Opacity="0.65"
-                                                   Foreground="#F2F2F2" />
-                                    </Grid>
-                                </Border>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding Duration}"
+                                               Foreground="#666668"
+                                               FontSize="12"
+                                               VerticalAlignment="Center" />
+                                </Grid>
                             </Button>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
                 <TextBlock Text="No tracks found."
-                           Opacity="0.55"
-                           Foreground="#F2F2F2"
+                           Foreground="#666668"
                            IsVisible="{Binding CollectionDetail.IsEmpty}" />
 
             </StackPanel>
         </ScrollViewer>
 
         <!-- Artist Detail -->
-        <ScrollViewer Grid.Row="1"
-                      Grid.Column="1"
+        <ScrollViewer Grid.Row="0"
+                      Grid.Column="0"
                       IsVisible="{Binding IsArtistDetailView}"
-                      Margin="28,30,28,0">
+                      Margin="24,24,24,0">
             <StackPanel Spacing="20">
 
                 <Button Content="Back"
                         Command="{Binding BackToSearchCommand}"
-                        HorizontalAlignment="Left" />
+                        HorizontalAlignment="Left"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Foreground="#88888A"
+                        Padding="0" />
 
                 <Grid ColumnDefinitions="160,*" ColumnSpacing="24">
-                    <Border Width="160"
-                            Height="160"
-                            CornerRadius="12"
-                            Background="#24252B">
-                        <TextBlock Text="♪"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   Foreground="#A78BFA"
-                                   FontSize="48" />
-                    </Border>
+                    <Image Width="160"
+                           Height="160"
+                           Stretch="UniformToFill"
+                           Source="{Binding ArtistDetail.ThumbnailUrl, Converter={StaticResource UrlBitmap}}" />
 
                     <StackPanel Grid.Column="1"
-                                VerticalAlignment="Bottom">
+                                VerticalAlignment="Bottom"
+                                Spacing="4">
                         <TextBlock Text="Artist"
-                                   Opacity="0.65"
-                                   FontSize="13"
-                                   Foreground="#F2F2F2" />
+                                   Foreground="#88888A"
+                                   FontSize="12" />
 
                         <TextBlock Text="{Binding ArtistDetail.Name}"
                                    FontSize="32"
                                    FontWeight="Bold"
-                                   Foreground="#F2F2F2" />
+                                   Foreground="#FFFFFF" />
 
                         <TextBlock Text="{Binding ArtistDetail.Subtitle}"
-                                   Opacity="0.75"
-                                   FontSize="14"
-                                   Foreground="#F2F2F2" />
+                                   Foreground="#88888A"
+                                   FontSize="13" />
                     </StackPanel>
                 </Grid>
 
                 <TextBlock Text="Loading artist..."
                            IsVisible="{Binding ArtistDetail.IsLoading}"
-                           Opacity="0.65"
-                           Foreground="#F2F2F2" />
+                           Foreground="#666668" />
 
                 <TextBlock Text="{Binding ArtistDetail.Error}"
-                           Foreground="Tomato"
-                           Opacity="0.9" />
+                           Foreground="Tomato" />
 
-                <StackPanel IsVisible="{Binding ArtistDetail.HasTopSongs}">
+                <StackPanel IsVisible="{Binding ArtistDetail.HasTopSongs}" Spacing="12">
                     <TextBlock Text="Top songs"
                                FontSize="18"
-                               FontWeight="SemiBold"
-                               Foreground="#F2F2F2"
-                               Margin="0,0,0,8" />
+                               FontWeight="Bold"
+                               Foreground="#FFFFFF" />
 
                     <ItemsControl ItemsSource="{Binding ArtistDetail.TopSongs}">
                         <ItemsControl.ItemTemplate>
@@ -511,69 +444,57 @@
                                         HorizontalAlignment="Stretch"
                                         Background="Transparent"
                                         BorderThickness="0"
-                                        Padding="0">
-                                    <Border Background="#18191D"
-                                            BorderBrush="#2A2B31"
-                                            BorderThickness="1"
-                                            CornerRadius="12"
-                                            Padding="14"
-                                            Margin="0,0,0,10">
-                                        <Grid ColumnDefinitions="*,Auto">
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding Title}"
-                                                           Foreground="#F2F2F2"
-                                                           FontSize="15"
-                                                           FontWeight="SemiBold" />
-                                                <TextBlock Text="{Binding AlbumTitle}"
-                                                           Opacity="0.65"
-                                                           FontSize="12"
-                                                           Foreground="#9A9AA0" />
-                                            </StackPanel>
+                                        Padding="0"
+                                        Margin="0,6">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="{Binding Title}"
+                                                       Foreground="#E8E8E8"
+                                                       FontSize="14"
+                                                       FontWeight="SemiBold" />
+                                            <TextBlock Text="{Binding AlbumTitle}"
+                                                       Foreground="#88888A"
+                                                       FontSize="12" />
+                                        </StackPanel>
 
-                                            <TextBlock Grid.Column="1"
-                                                       Text="{Binding Duration}"
-                                                       Opacity="0.65"
-                                                       Foreground="#F2F2F2" />
-                                        </Grid>
-                                    </Border>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding Duration}"
+                                                   Foreground="#666668"
+                                                   FontSize="12"
+                                                   VerticalAlignment="Center" />
+                                    </Grid>
                                 </Button>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </StackPanel>
 
-                <StackPanel IsVisible="{Binding ArtistDetail.HasAlbums}">
+                <StackPanel IsVisible="{Binding ArtistDetail.HasAlbums}" Spacing="12">
                     <TextBlock Text="Albums"
                                FontSize="18"
-                               FontWeight="SemiBold"
-                               Foreground="#F2F2F2"
-                               Margin="0,16,0,8" />
+                               FontWeight="Bold"
+                               Foreground="#FFFFFF" />
 
                     <ItemsControl ItemsSource="{Binding ArtistDetail.Albums}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Grid ColumnDefinitions="48,*" Margin="0,4">
-                                    <Border Width="40"
-                                            Height="40"
-                                            CornerRadius="8"
-                                            Background="#24252B">
-                                        <TextBlock Text="♪"
-                                                   HorizontalAlignment="Center"
-                                                   VerticalAlignment="Center"
-                                                   Foreground="#A78BFA"
-                                                   FontSize="16" />
-                                    </Border>
+                                <Grid ColumnDefinitions="40,*" Margin="0,6">
+                                    <Image Width="40"
+                                           Height="40"
+                                           Stretch="UniformToFill"
+                                           Source="{Binding ThumbnailUrl, Converter={StaticResource UrlBitmap}}" />
 
                                     <StackPanel Grid.Column="1"
-                                                Margin="8,0,0,0">
+                                                Margin="12,0,0,0"
+                                                VerticalAlignment="Center"
+                                                Spacing="2">
                                         <TextBlock Text="{Binding Title}"
-                                                   Foreground="#F2F2F2"
-                                                   FontSize="15"
+                                                   Foreground="#E8E8E8"
+                                                   FontSize="14"
                                                    FontWeight="SemiBold" />
                                         <TextBlock Text="{Binding ArtistName}"
-                                                   Opacity="0.65"
-                                                   FontSize="12"
-                                                   Foreground="#9A9AA0" />
+                                                   Foreground="#88888A"
+                                                   FontSize="12" />
                                     </StackPanel>
                                 </Grid>
                             </DataTemplate>
@@ -581,38 +502,32 @@
                     </ItemsControl>
                 </StackPanel>
 
-                <StackPanel IsVisible="{Binding ArtistDetail.HasSingles}">
+                <StackPanel IsVisible="{Binding ArtistDetail.HasSingles}" Spacing="12">
                     <TextBlock Text="Singles"
                                FontSize="18"
-                               FontWeight="SemiBold"
-                               Foreground="#F2F2F2"
-                               Margin="0,16,0,8" />
+                               FontWeight="Bold"
+                               Foreground="#FFFFFF" />
 
                     <ItemsControl ItemsSource="{Binding ArtistDetail.Singles}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Grid ColumnDefinitions="48,*" Margin="0,4">
-                                    <Border Width="40"
-                                            Height="40"
-                                            CornerRadius="8"
-                                            Background="#24252B">
-                                        <TextBlock Text="♪"
-                                                   HorizontalAlignment="Center"
-                                                   VerticalAlignment="Center"
-                                                   Foreground="#A78BFA"
-                                                   FontSize="16" />
-                                    </Border>
+                                <Grid ColumnDefinitions="40,*" Margin="0,6">
+                                    <Image Width="40"
+                                           Height="40"
+                                           Stretch="UniformToFill"
+                                           Source="{Binding ThumbnailUrl, Converter={StaticResource UrlBitmap}}" />
 
                                     <StackPanel Grid.Column="1"
-                                                Margin="8,0,0,0">
+                                                Margin="12,0,0,0"
+                                                VerticalAlignment="Center"
+                                                Spacing="2">
                                         <TextBlock Text="{Binding Title}"
-                                                   Foreground="#F2F2F2"
-                                                   FontSize="15"
+                                                   Foreground="#E8E8E8"
+                                                   FontSize="14"
                                                    FontWeight="SemiBold" />
                                         <TextBlock Text="{Binding ArtistName}"
-                                                   Opacity="0.65"
-                                                   FontSize="12"
-                                                   Foreground="#9A9AA0" />
+                                                   Foreground="#88888A"
+                                                   FontSize="12" />
                                     </StackPanel>
                                 </Grid>
                             </DataTemplate>
@@ -624,46 +539,44 @@
         </ScrollViewer>
 
         <!-- Queue -->
-        <Border Grid.Row="1"
-                Grid.Column="2"
-                BorderBrush="#25262B"
+        <Border Grid.Row="0"
+                Grid.Column="1"
+                BorderBrush="#151517"
                 BorderThickness="1,0,0,0"
-                Padding="26,32">
-
+                Padding="24,28">
             <Grid RowDefinitions="Auto,*">
-                <StackPanel>
+                <StackPanel Spacing="2">
                     <TextBlock Text="Queue"
-                               FontSize="22"
-                               FontWeight="SemiBold"
-                               Foreground="#F2F2F2" />
-
+                               FontSize="18"
+                               FontWeight="Bold"
+                               Foreground="#FFFFFF" />
                     <TextBlock Text="Upcoming songs"
-                               FontSize="13"
-                               Foreground="#77777D"
-                               Margin="0,5,0,0" />
+                               FontSize="12"
+                               Foreground="#666668" />
                 </StackPanel>
 
                 <ItemsControl Grid.Row="1"
-                              Margin="0,24,0,0"
+                              Margin="0,20,0,0"
                               ItemsSource="{Binding Queue}">
-
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Padding="10"
-                                    Margin="0,0,0,8"
-                                    CornerRadius="10"
-                                    Background="#15161A">
-
-                                <StackPanel Spacing="3">
+                            <Grid ColumnDefinitions="32,*" Margin="0,0,0,10">
+                                <Image Width="32"
+                                       Height="32"
+                                       Stretch="UniformToFill"
+                                       Source="{Binding ThumbnailUrl, Converter={StaticResource UrlBitmap}}" />
+                                <StackPanel Grid.Column="1"
+                                            Margin="10,0,0,0"
+                                            Spacing="2"
+                                            VerticalAlignment="Center">
                                     <TextBlock Text="{Binding Title}"
-                                               Foreground="#F2F2F2"
-                                               FontSize="14" />
-
+                                               Foreground="#E8E8E8"
+                                               FontSize="13" />
                                     <TextBlock Text="{Binding ArtistName}"
-                                               Foreground="#8E8E95"
-                                               FontSize="12" />
+                                               Foreground="#88888A"
+                                               FontSize="11" />
                                 </StackPanel>
-                            </Border>
+                            </Grid>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
@@ -671,72 +584,144 @@
         </Border>
 
         <!-- Bottom player -->
-        <Border Grid.Row="2"
-                Grid.ColumnSpan="3"
-                BorderBrush="#25262B"
+        <Border Grid.Row="1"
+                Grid.ColumnSpan="2"
+                BorderBrush="#151517"
                 BorderThickness="0,1,0,0"
-                Background="#111214"
-                Padding="24">
-
-            <Grid ColumnDefinitions="*,Auto,*">
-                <Grid ColumnDefinitions="52,*">
-                    <Border Width="52"
-                            Height="52"
-                            CornerRadius="10"
-                            Background="#24252B">
-
-                        <TextBlock Text="♪"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   Foreground="#A78BFA"
-                                   FontSize="22" />
+                Background="#0D0D0F"
+                Padding="16,8">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <!-- Left: Track info -->
+                <Grid ColumnDefinitions="40,*"
+                      Grid.Column="0"
+                      Margin="0,0,20,0">
+                    <Border Width="40"
+                            Height="40"
+                            CornerRadius="3"
+                            ClipToBounds="True">
+                        <Image Stretch="UniformToFill"
+                               Source="{Binding CurrentPlaybackSnapshot.CurrentTrack.ThumbnailUrl, Converter={StaticResource UrlBitmap}}" />
                     </Border>
 
                     <StackPanel Grid.Column="1"
-                                Margin="14,0,0,0"
+                                Margin="10,0,0,0"
                                 VerticalAlignment="Center"
-                                Spacing="3">
-
-                        <TextBlock Text="{Binding CurrentSong.Title}"
-                                   Foreground="#F2F2F2"
-                                   FontSize="14"
+                                Spacing="1">
+                        <TextBlock Text="{Binding CurrentTrackTitle}"
+                                   Foreground="#E8E8E8"
+                                   FontSize="12"
                                    FontWeight="SemiBold" />
-
-                        <TextBlock Text="{Binding CurrentSong.ArtistName}"
-                                   Foreground="#8E8E95"
-                                   FontSize="12" />
+                        <TextBlock Text="{Binding CurrentTrackArtist}"
+                                   Foreground="#88888A"
+                                   FontSize="11" />
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="6">
+                            <TextBlock Text="{Binding QueueIndexText}"
+                                       Foreground="#666668"
+                                       FontSize="10"
+                                       IsVisible="{Binding QueueIndexText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                            <TextBlock Text="{Binding PlaybackError}"
+                                       Foreground="Tomato"
+                                       FontSize="10"
+                                       IsVisible="{Binding HasPlaybackError}" />
+                        </StackPanel>
                     </StackPanel>
                 </Grid>
 
+                <!-- Center: Progress + Controls -->
                 <StackPanel Grid.Column="1"
-                            Orientation="Horizontal"
-                            VerticalAlignment="Center"
-                            Spacing="14">
-
-                    <Button Content="Prev" />
-                    <Button Content="Play"
-                            Command="{Binding PlaySelectedCommand}" />
-                    <Button Content="Next" />
+                            Spacing="4"
+                            VerticalAlignment="Center">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                        <TextBlock Text="{Binding PlaybackPositionText}"
+                                   Foreground="#666668"
+                                   FontSize="10"
+                                   VerticalAlignment="Center" />
+                        <Slider x:Name="PositionSlider"
+                                Grid.Column="1"
+                                Minimum="0"
+                                Maximum="{Binding PlaybackDurationSeconds}"
+                                Margin="6,0"
+                                Value="{Binding PlaybackPositionSeconds, Mode=TwoWay}"
+                                IsEnabled="{Binding CanSeek}"
+                                Foreground="#E8E8E8"
+                                Background="#222223" />
+                        <TextBlock Grid.Column="2"
+                                   Text="{Binding PlaybackDurationText}"
+                                   Foreground="#666668"
+                                   FontSize="10"
+                                   VerticalAlignment="Center" />
+                    </Grid>
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="12"
+                                HorizontalAlignment="Center">
+                        <Button Classes="player-btn"
+                                Command="{Binding PreviousCommand}">
+                            <Path Data="{StaticResource IconPrev}"
+                                  Fill="#88888A"
+                                  Width="14"
+                                  Height="14"
+                                  Stretch="Uniform" />
+                        </Button>
+                        <Button Classes="player-btn"
+                                Command="{Binding TogglePlayPauseCommand}">
+                            <Grid>
+                                <Path Data="{StaticResource IconPlay}"
+                                      Fill="#E8E8E8"
+                                      Width="18"
+                                      Height="18"
+                                      Stretch="Uniform"
+                                      IsVisible="{Binding !IsPlaying}" />
+                                <Path Data="{StaticResource IconPause}"
+                                      Fill="#E8E8E8"
+                                      Width="18"
+                                      Height="18"
+                                      Stretch="Uniform"
+                                      IsVisible="{Binding IsPlaying}" />
+                            </Grid>
+                        </Button>
+                        <Button Classes="player-btn"
+                                Command="{Binding NextCommand}">
+                            <Path Data="{StaticResource IconNext}"
+                                  Fill="#88888A"
+                                  Width="14"
+                                  Height="14"
+                                  Stretch="Uniform" />
+                        </Button>
+                    </StackPanel>
                 </StackPanel>
 
+                <!-- Right: Shuffle + Repeat + Volume -->
                 <StackPanel Grid.Column="2"
                             Orientation="Horizontal"
-                            HorizontalAlignment="Right"
+                            Spacing="8"
                             VerticalAlignment="Center"
-                            Spacing="12">
-
-                    <TextBlock Text="0:00"
-                               Foreground="#77777D"
-                               VerticalAlignment="Center" />
-
-                    <Border Width="160"
-                            Height="4"
-                            Background="#2A2B31"
-                            CornerRadius="2" />
-
-                    <TextBlock Text="0:00"
-                               Foreground="#77777D"
-                               VerticalAlignment="Center" />
+                            Margin="20,0,0,0">
+                    <Button Classes="player-btn"
+                            Command="{Binding ToggleShuffleCommand}">
+                        <TextBlock Text="{Binding ShuffleText}"
+                                   Foreground="#88888A"
+                                   FontSize="10" />
+                    </Button>
+                    <Button Classes="player-btn"
+                            Command="{Binding CycleRepeatModeCommand}">
+                        <TextBlock Text="{Binding RepeatModeText}"
+                                   Foreground="#88888A"
+                                   FontSize="10" />
+                    </Button>
+                    <Path Data="{StaticResource IconVolume}"
+                          Fill="#666668"
+                          Width="12"
+                          Height="12"
+                          Stretch="Uniform"
+                          VerticalAlignment="Center" />
+                    <Slider x:Name="VolumeSlider"
+                            Width="72"
+                            Minimum="0"
+                            Maximum="100"
+                            Value="{Binding PlaybackVolumePercent, Mode=TwoWay}"
+                            Foreground="#E8E8E8"
+                            Background="#222223" />
                 </StackPanel>
             </Grid>
         </Border>

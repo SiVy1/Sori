@@ -8,8 +8,10 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using InnerTube;
 using InnerTube.Browse;
+using InnerTube.Home;
 using InnerTube.Search;
 using Sori.Core.Interfaces;
+using Sori.Playback;
 
 namespace App;
 
@@ -33,6 +35,7 @@ public class App : Application
 
             ISearchService searchService;
             ICollectionService collectionService;
+            IHomeService homeService;
 
             if (useInnerTube)
             {
@@ -46,21 +49,42 @@ public class App : Application
                     innerTubeClient,
                     contextFactory,
                     new BrowseMapper());
+
+                homeService = new InnerTubeHomeService(
+                    innerTubeClient,
+                    contextFactory,
+                    new HomeMapper());
             }
             else
             {
                 searchService = new MockMusicClient();
                 collectionService = new MockCollectionService();
+                homeService = new MockHomeService();
             }
 
             IPlaybackService playbackService = new MockPlaybackService();
             IQueueService queueService = new QueueService();
 
+            IAudioPlaybackService audioPlaybackService = new VlcAudioPlaybackService();
+            var youtubeResolver = new YoutubeExplodePlaybackResolver();
+            var prefetchingResolver = new PrefetchingPlaybackResolver(youtubeResolver);
+
+            IPlaybackResolver playbackResolver = prefetchingResolver;
+            IPrefetchingPlaybackResolver prefetchResolver = prefetchingResolver;
+
+            IPlaybackCoordinator playbackCoordinator = new PlaybackCoordinator(
+                playbackResolver,
+                audioPlaybackService,
+                queueService);
+
             var viewModel = new MainWindowViewModel(
                 searchService,
                 playbackService,
                 queueService,
-                collectionService);
+                collectionService,
+                homeService,
+                playbackCoordinator,
+                prefetchResolver);
             desktop.MainWindow = new MainWindow { DataContext = viewModel };
         }
 

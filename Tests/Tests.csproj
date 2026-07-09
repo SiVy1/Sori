@@ -15,9 +15,11 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\Sori.App\Sori.App.csproj"/>
         <ProjectReference Include="..\Sori.Cache\Sori.Cache.csproj"/>
-        <ProjectReference Include="..\Core\Core.csproj"/>
+        <ProjectReference Include="..\Sori.Core\Sori.Core.csproj"/>
         <ProjectReference Include="..\Sori.InnerTube\Sori.InnerTube.csproj"/>
+        <ProjectReference Include="..\Sori.Playback\Sori.Playback.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
