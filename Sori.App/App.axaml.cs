@@ -62,7 +62,6 @@ public class App : Application
                 homeService = new MockHomeService();
             }
 
-            IPlaybackService playbackService = new MockPlaybackService();
             IQueueService queueService = new QueueService();
 
             IAudioPlaybackService audioPlaybackService = new VlcAudioPlaybackService();
@@ -75,11 +74,11 @@ public class App : Application
             IPlaybackCoordinator playbackCoordinator = new PlaybackCoordinator(
                 playbackResolver,
                 audioPlaybackService,
-                queueService);
+                queueService,
+                prefetchResolver);
 
             var viewModel = new MainWindowViewModel(
                 searchService,
-                playbackService,
                 queueService,
                 collectionService,
                 homeService,

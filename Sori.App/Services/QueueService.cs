@@ -263,6 +263,36 @@ public sealed class QueueService : IQueueService
         return null;
     }
 
+    public Song? PeekPlannedNext()
+    {
+        if (_items.Count == 0 || _currentIndex < 0)
+        {
+            return null;
+        }
+
+        if (RepeatMode == RepeatMode.One)
+        {
+            return Current;
+        }
+
+        if (ShuffleEnabled)
+        {
+            return PeekPlannedNextShuffle();
+        }
+
+        if (_currentIndex < _items.Count - 1)
+        {
+            return _items[_currentIndex + 1];
+        }
+
+        if (RepeatMode == RepeatMode.All)
+        {
+            return _items[0];
+        }
+
+        return null;
+    }
+
     public void SetShuffle(bool enabled)
     {
         if (ShuffleEnabled == enabled)
@@ -368,6 +398,7 @@ public sealed class QueueService : IQueueService
             {
                 return _items[plannedIndex];
             }
+            _plannedShuffleNextId = null;
         }
 
         // Pure peek: pick a random candidate without storing it as planned.
@@ -382,5 +413,44 @@ public sealed class QueueService : IQueueService
         }
 
         return _items[candidates[_random.Next(candidates.Count)]];
+    }
+
+    private Song? PeekPlannedNextShuffle()
+    {
+        if (_items.Count == 0 || _currentIndex < 0)
+        {
+            return null;
+        }
+
+        if (_items.Count == 1)
+        {
+            return RepeatMode is RepeatMode.One or RepeatMode.All ? Current : null;
+        }
+
+        // Return existing planned next if still valid.
+        if (_plannedShuffleNextId is not null)
+        {
+            var plannedIndex = _items.FindIndex(x => x.Id == _plannedShuffleNextId);
+            if (plannedIndex >= 0 && plannedIndex != _currentIndex)
+            {
+                return _items[plannedIndex];
+            }
+            _plannedShuffleNextId = null;
+        }
+
+        // Plan a new next track and return it.
+        var candidates = Enumerable
+            .Range(0, _items.Count)
+            .Where(x => x != _currentIndex)
+            .ToList();
+
+        if (candidates.Count == 0)
+        {
+            return null;
+        }
+
+        var nextIndex = candidates[_random.Next(candidates.Count)];
+        _plannedShuffleNextId = _items[nextIndex].Id;
+        return _items[nextIndex];
     }
 }

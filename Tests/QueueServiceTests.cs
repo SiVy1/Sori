@@ -191,4 +191,37 @@ public class QueueServiceTests
         Assert.Equal("D", peeked?.Title);
         Assert.Equal("D", next?.Title);
     }
+
+    [Fact]
+    public void PeekPlannedNext_InShuffle_PlanAndMoveNextAgree()
+    {
+        var queue = new QueueService();
+        queue.SetQueue([
+            new Song { Id = "1", Title = "A" },
+            new Song { Id = "2", Title = "B" },
+            new Song { Id = "3", Title = "C" }
+        ], 0);
+        queue.SetShuffle(true);
+
+        var planned = queue.PeekPlannedNext();
+        var next = queue.MoveNext();
+
+        Assert.NotNull(planned);
+        Assert.Equal(planned?.Id, next?.Id);
+    }
+
+    [Fact]
+    public void PeekPlannedNext_WithoutShuffle_ReturnsNextInOrder()
+    {
+        var queue = new QueueService();
+        queue.SetQueue([
+            new Song { Id = "1", Title = "A" },
+            new Song { Id = "2", Title = "B" },
+            new Song { Id = "3", Title = "C" }
+        ], 0);
+
+        var planned = queue.PeekPlannedNext();
+
+        Assert.Equal("B", planned?.Title);
+    }
 }

@@ -8,15 +8,18 @@ public sealed class PlaybackCoordinator : IPlaybackCoordinator
     private readonly IPlaybackResolver _resolver;
     private readonly IAudioPlaybackService _audio;
     private readonly IQueueService _queue;
+    private readonly IPrefetchingPlaybackResolver? _prefetchResolver;
 
     public PlaybackCoordinator(
         IPlaybackResolver resolver,
         IAudioPlaybackService audio,
-        IQueueService queue)
+        IQueueService queue,
+        IPrefetchingPlaybackResolver? prefetchResolver = null)
     {
         _resolver = resolver;
         _audio = audio;
         _queue = queue;
+        _prefetchResolver = prefetchResolver;
 
         _audio.SnapshotChanged += (_, args) =>
         {
@@ -25,14 +28,30 @@ public sealed class PlaybackCoordinator : IPlaybackCoordinator
 
         _audio.TrackEnded += async (_, _) =>
         {
-            var next = _queue.MoveNext();
-            if (next is not null)
+            try
             {
-                await PlaySongWithRetryAsync(next);
+                var next = _queue.MoveNext();
+                if (next is not null)
+                {
+                    await PlaySongWithRetryAsync(next);
+                }
+                else
+                {
+                    await _audio.StopAsync();
+                }
             }
-            else
+            catch (Exception)
             {
-                await _audio.StopAsync();
+                // Ensure playback stops safely even if resolving/playing the next
+                // track fails after retry. The error is reflected in the snapshot.
+                try
+                {
+                    await _audio.StopAsync();
+                }
+                catch
+                {
+                    // ignored
+                }
             }
         };
     }
@@ -83,6 +102,7 @@ public sealed class PlaybackCoordinator : IPlaybackCoordinator
         if (next is not null)
         {
             await PlaySongWithRetryAsync(next, cancellationToken);
+            await PrefetchNextAsync(cancellationToken);
         }
     }
 
@@ -92,6 +112,44 @@ public sealed class PlaybackCoordinator : IPlaybackCoordinator
         if (previous is not null)
         {
             await PlaySongWithRetryAsync(previous, cancellationToken);
+            await PrefetchNextAsync(cancellationToken);
+        }
+    }
+
+    public async Task PlayQueueItemAsync(CancellationToken cancellationToken = default)
+    {
+        var current = _queue.Current;
+
+        if (current is null)
+        {
+            return;
+        }
+
+        await PlaySongWithRetryAsync(current, cancellationToken);
+        await PrefetchNextAsync(cancellationToken);
+    }
+
+    private async Task PrefetchNextAsync(CancellationToken cancellationToken = default)
+    {
+        if (_prefetchResolver is null)
+        {
+            return;
+        }
+
+        var next = _queue.PeekPlannedNext();
+
+        if (next is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _prefetchResolver.PrefetchAsync(next, cancellationToken);
+        }
+        catch
+        {
+            // Prefetch failures must never break playback.
         }
     }
 

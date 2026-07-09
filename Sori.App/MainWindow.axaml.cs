@@ -58,6 +58,28 @@ public partial class MainWindow : Window
             return;
         }
 
+        // Media keys
+        if (e.Key == Key.MediaPlayPause)
+        {
+            _ = vm.Player.TogglePlayPauseCommand.ExecuteAsync(null);
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.MediaNextTrack)
+        {
+            _ = vm.Player.NextCommand.ExecuteAsync(null);
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.MediaPreviousTrack)
+        {
+            _ = vm.Player.PreviousCommand.ExecuteAsync(null);
+            e.Handled = true;
+            return;
+        }
+
         if (!vm.IsModalOpen)
             return;
 
@@ -75,14 +97,22 @@ public partial class MainWindow : Window
 
         if (e.Key == Key.Down && ReferenceEquals(focused, ModalSearchBox))
         {
-            if (vm.ModalItems.Count > 0)
+            if (vm.Search.IsCommandMode && vm.Search.CommandItems.Count > 0)
+            {
+                FocusCommandItem(0);
+            }
+            else if (vm.Search.ModalItems.Count > 0)
+            {
                 FocusModalItem(0);
+            }
 
             e.Handled = true;
             return;
         }
 
-        if (e.Key == Key.Up && IsInside(focused, ModalListBox) && ModalListBox.SelectedIndex <= 0)
+        if (e.Key == Key.Up &&
+            (IsInside(focused, ModalListBox) || IsInside(focused, CommandListBox)) &&
+            GetActiveListSelectedIndex() <= 0)
         {
             ModalSearchBox.Focus();
             ModalSearchBox.CaretIndex = ModalSearchBox.Text?.Length ?? 0;
@@ -93,18 +123,24 @@ public partial class MainWindow : Window
 
         if (e.Key == Key.Enter)
         {
-            if (vm.IsCommandMode)
+            if (vm.Search.IsCommandMode)
             {
-                vm.ExecuteCommandCommand.Execute(null);
+                vm.Search.ExecuteCommandCommand.Execute(null);
             }
             else if (ReferenceEquals(focused, ModalSearchBox))
             {
-                _ = vm.SearchCommand.ExecuteAsync(null);
+                _ = vm.Search.SearchCommand.ExecuteAsync(null);
             }
-            else if (vm.ModalItems.Count > 0 && ModalListBox.SelectedIndex >= 0)
+            else if (vm.Search.ModalItems.Count > 0 && ModalListBox.SelectedIndex >= 0)
             {
-                var selected = vm.ModalItems[ModalListBox.SelectedIndex];
-                vm.OpenHomeItemCommand.Execute(selected);
+                if (e.KeyModifiers == KeyModifiers.Control)
+                {
+                    vm.Search.PlaySelectedNow();
+                }
+                else
+                {
+                    vm.Search.AddSelectedToQueue();
+                }
             }
 
             e.Handled = true;
@@ -126,6 +162,30 @@ public partial class MainWindow : Window
                 ModalListBox.Focus();
 
         }, DispatcherPriority.Background);
+    }
+
+    private void FocusCommandItem(int index)
+    {
+        CommandListBox.SelectedIndex = index;
+        CommandListBox.ScrollIntoView(CommandListBox.SelectedItem);
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            CommandListBox.UpdateLayout();
+
+            if (CommandListBox.ContainerFromIndex(index) is ListBoxItem item)
+                item.Focus();
+            else
+                CommandListBox.Focus();
+
+        }, DispatcherPriority.Background);
+    }
+
+    private int GetActiveListSelectedIndex()
+    {
+        if (CommandListBox.IsVisible)
+            return CommandListBox.SelectedIndex;
+        return ModalListBox.SelectedIndex;
     }
 
     private static bool IsInside(object? focused, Control parent)

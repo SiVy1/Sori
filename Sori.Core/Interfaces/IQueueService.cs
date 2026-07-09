@@ -26,6 +26,14 @@ public interface IQueueService
     Song? MovePrevious();
     Song? PeekNext();
 
+    /// <summary>
+    /// Returns the planned next track. For non-shuffle this is the next track in order.
+    /// For shuffle, if a next track is already planned it is returned; otherwise one is
+    /// selected, stored as the planned next, and returned. This ensures coordinator and
+    /// prefetch agree on what will play next.
+    /// </summary>
+    Song? PeekPlannedNext();
+
     void SetShuffle(bool enabled);
     void ToggleShuffle();
 

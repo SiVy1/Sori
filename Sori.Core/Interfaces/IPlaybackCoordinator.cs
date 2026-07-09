@@ -29,4 +29,9 @@ public interface IPlaybackCoordinator
     Task PlayNextAsync(CancellationToken cancellationToken = default);
 
     Task PlayPreviousAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Plays the current item in the queue, then prefetches the planned next item.
+    /// </summary>
+    Task PlayQueueItemAsync(CancellationToken cancellationToken = default);
 }
