@@ -23,8 +23,6 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly ICollectionService _collectionService;
     private readonly IHomeService _homeService;
 
-    private bool _handlingPlaybackTerminalState;
-
     [ObservableProperty] private Song? currentSong;
 
     [ObservableProperty] private PlaybackSnapshot currentPlaybackSnapshot = new();
@@ -130,20 +128,19 @@ public partial class MainWindowViewModel : ObservableObject
 
         _playbackCoordinator.SnapshotChanged += (_, args) =>
         {
-            CurrentPlaybackSnapshot = args.Snapshot;
-
-            if (args.Snapshot.State == PlaybackState.Stopped &&
-                args.Snapshot.CurrentTrack is not null &&
-                !_handlingPlaybackTerminalState)
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
             {
-                _ = PlayNextAfterEndAsync();
-            }
+                CurrentPlaybackSnapshot = args.Snapshot;
+            });
         };
 
         _queueService.Changed += (_, _) =>
         {
-            SyncQueueFromService();
-            NotifyQueuePropertiesChanged();
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                SyncQueueFromService();
+                NotifyQueuePropertiesChanged();
+            });
         };
 
         SearchCommand = new AsyncRelayCommand(SearchAsync);
@@ -412,47 +409,13 @@ public partial class MainWindowViewModel : ObservableObject
         catch (Exception ex)
         {
             PlaybackError = ex.Message;
-            _queueService.Remove(current);
-            SyncQueueFromService();
+            // Do NOT remove from queue on playback error.
+            // The user may want to retry or skip manually.
             if (CurrentSong == current) CurrentSong = null;
         }
         finally
         {
             IsPlaybackLoading = false;
-        }
-    }
-
-    private async Task PlayNextAfterEndAsync()
-    {
-        if (_handlingPlaybackTerminalState)
-        {
-            return;
-        }
-
-        if (CurrentPlaybackSnapshot.CurrentTrack?.Id != _queueService.Current?.Id)
-        {
-            return;
-        }
-
-        try
-        {
-            _handlingPlaybackTerminalState = true;
-
-            var next = _queueService.MoveNext();
-
-            if (next is null)
-            {
-                return;
-            }
-
-            SyncQueueFromService();
-            NotifyQueuePropertiesChanged();
-
-            await PlayCurrentQueueItemAsync();
-        }
-        finally
-        {
-            _handlingPlaybackTerminalState = false;
         }
     }
 

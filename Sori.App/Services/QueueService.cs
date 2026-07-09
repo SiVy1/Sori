@@ -10,10 +10,10 @@ public sealed class QueueService : IQueueService
 {
     private readonly List<Song> _items = [];
     private readonly Random _random = new();
-    private readonly List<int> _shuffleHistory = [];
+    private readonly List<string> _shuffleHistory = [];
 
     private int _currentIndex = -1;
-    private int? _plannedShuffleNextIndex;
+    private string? _plannedShuffleNextId;
 
     public IReadOnlyList<Song> Items => _items;
 
@@ -52,6 +52,13 @@ public sealed class QueueService : IQueueService
         _items.Insert(insertIndex, song);
 
         if (_currentIndex < 0) _currentIndex = 0;
+
+        // In shuffle mode, prioritize the just-added song as the next track.
+        if (ShuffleEnabled)
+        {
+            _plannedShuffleNextId = song.Id;
+        }
+
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
@@ -76,12 +83,36 @@ public sealed class QueueService : IQueueService
         if (_items.Count == 0)
         {
             _currentIndex = -1;
-            _plannedShuffleNextIndex = null;
+            _shuffleHistory.Clear();
+            _plannedShuffleNextId = null;
             Changed?.Invoke(this, EventArgs.Empty);
             return;
         }
 
-        if (_currentIndex >= _items.Count) _currentIndex = _items.Count - 1;
+        if (index < _currentIndex)
+        {
+            _currentIndex--;
+        }
+        else if (index == _currentIndex)
+        {
+            // Current removed; stay at same index (now points to next item)
+            // or clamp to end if we were at the last position.
+            if (_currentIndex >= _items.Count)
+            {
+                _currentIndex = _items.Count - 1;
+            }
+        }
+
+        // Clean up shuffle history entries that no longer exist.
+        _shuffleHistory.RemoveAll(id => _items.All(x => x.Id != id));
+
+        // Invalidate planned next if the planned song was removed.
+        if (_plannedShuffleNextId is not null &&
+            _items.All(x => x.Id != _plannedShuffleNextId))
+        {
+            _plannedShuffleNextId = null;
+        }
+
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
@@ -90,7 +121,7 @@ public sealed class QueueService : IQueueService
         _items.Clear();
         _currentIndex = -1;
         _shuffleHistory.Clear();
-        _plannedShuffleNextIndex = null;
+        _plannedShuffleNextId = null;
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
@@ -99,7 +130,7 @@ public sealed class QueueService : IQueueService
         _items.Clear();
         _items.AddRange(songs);
         _shuffleHistory.Clear();
-        _plannedShuffleNextIndex = null;
+        _plannedShuffleNextId = null;
 
         if (startSong is not null)
         {
@@ -119,7 +150,7 @@ public sealed class QueueService : IQueueService
         _items.Clear();
         _items.AddRange(songs);
         _shuffleHistory.Clear();
-        _plannedShuffleNextIndex = null;
+        _plannedShuffleNextId = null;
 
         _currentIndex = startIndex >= 0 && startIndex < _items.Count ? startIndex : (_items.Count > 0 ? 0 : -1);
         Changed?.Invoke(this, EventArgs.Empty);
@@ -169,12 +200,20 @@ public sealed class QueueService : IQueueService
 
         if (ShuffleEnabled && _shuffleHistory.Count > 0)
         {
-            var previousIndex = _shuffleHistory[^1];
-            _shuffleHistory.RemoveAt(_shuffleHistory.Count - 1);
+            // Walk back through history skipping IDs that no longer exist.
+            while (_shuffleHistory.Count > 0)
+            {
+                var previousId = _shuffleHistory[^1];
+                _shuffleHistory.RemoveAt(_shuffleHistory.Count - 1);
 
-            _currentIndex = previousIndex;
-            Changed?.Invoke(this, EventArgs.Empty);
-            return Current;
+                var previousIndex = _items.FindIndex(x => x.Id == previousId);
+                if (previousIndex >= 0)
+                {
+                    _currentIndex = previousIndex;
+                    Changed?.Invoke(this, EventArgs.Empty);
+                    return Current;
+                }
+            }
         }
 
         if (_currentIndex > 0)
@@ -236,7 +275,7 @@ public sealed class QueueService : IQueueService
         if (!ShuffleEnabled)
         {
             _shuffleHistory.Clear();
-            _plannedShuffleNextIndex = null;
+            _plannedShuffleNextId = null;
         }
 
         Changed?.Invoke(this, EventArgs.Empty);
@@ -280,20 +319,23 @@ public sealed class QueueService : IQueueService
             return null;
         }
 
-        if (_currentIndex >= 0)
+        var currentId = Current?.Id;
+        if (currentId is not null)
         {
-            _shuffleHistory.Add(_currentIndex);
+            _shuffleHistory.Add(currentId);
         }
 
-        if (_plannedShuffleNextIndex is { } planned &&
-            planned >= 0 &&
-            planned < _items.Count &&
-            planned != _currentIndex)
+        if (_plannedShuffleNextId is not null)
         {
-            _currentIndex = planned;
-            _plannedShuffleNextIndex = null;
-            Changed?.Invoke(this, EventArgs.Empty);
-            return Current;
+            var plannedIndex = _items.FindIndex(x => x.Id == _plannedShuffleNextId);
+            if (plannedIndex >= 0 && plannedIndex != _currentIndex)
+            {
+                _currentIndex = plannedIndex;
+                _plannedShuffleNextId = null;
+                Changed?.Invoke(this, EventArgs.Empty);
+                return Current;
+            }
+            _plannedShuffleNextId = null;
         }
 
         var candidates = Enumerable
@@ -318,14 +360,17 @@ public sealed class QueueService : IQueueService
             return RepeatMode is RepeatMode.One or RepeatMode.All ? Current : null;
         }
 
-        if (_plannedShuffleNextIndex is { } planned &&
-            planned >= 0 &&
-            planned < _items.Count &&
-            planned != _currentIndex)
+        // Use planned next if available (e.g. from AddNext in shuffle mode).
+        if (_plannedShuffleNextId is not null)
         {
-            return _items[planned];
+            var plannedIndex = _items.FindIndex(x => x.Id == _plannedShuffleNextId);
+            if (plannedIndex >= 0 && plannedIndex != _currentIndex)
+            {
+                return _items[plannedIndex];
+            }
         }
 
+        // Pure peek: pick a random candidate without storing it as planned.
         var candidates = Enumerable
             .Range(0, _items.Count)
             .Where(x => x != _currentIndex)
@@ -336,7 +381,6 @@ public sealed class QueueService : IQueueService
             return null;
         }
 
-        _plannedShuffleNextIndex = candidates[_random.Next(candidates.Count)];
-        return _items[_plannedShuffleNextIndex.Value];
+        return _items[candidates[_random.Next(candidates.Count)]];
     }
 }

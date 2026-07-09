@@ -27,7 +27,9 @@ public sealed class VlcAudioPlaybackService : IAudioPlaybackService, IDisposable
         _mediaPlayer.Stopped += (_, _) => UpdateStatus(PlaybackState.Stopped);
         _mediaPlayer.EndReached += (_, _) =>
         {
-            UpdateStatus(PlaybackState.Stopped);
+            // Do NOT update snapshot to Stopped here.
+            // TrackEnded is handled by PlaybackCoordinator for auto-next.
+            // Updating to Stopped would race with VM's SnapshotChanged handler.
             TrackEnded?.Invoke(this, EventArgs.Empty);
         };
         _mediaPlayer.EncounteredError += (_, _) => SetError("VLC encountered a playback error.");

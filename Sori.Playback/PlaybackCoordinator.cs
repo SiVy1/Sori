@@ -30,6 +30,10 @@ public sealed class PlaybackCoordinator : IPlaybackCoordinator
             {
                 await PlaySongWithRetryAsync(next);
             }
+            else
+            {
+                await _audio.StopAsync();
+            }
         };
     }
 
@@ -100,6 +104,10 @@ public sealed class PlaybackCoordinator : IPlaybackCoordinator
         {
             var playable = await _resolver.ResolveAsync(song, cancellationToken);
             await _audio.PlayAsync(playable, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception)
         {
