@@ -178,6 +178,38 @@
                                        Margin="0,0,0,8"
                                        IsVisible="{Binding IsSearching}" />
 
+                            <!-- Auth mode -->
+                            <StackPanel Grid.Row="1"
+                                        IsVisible="{Binding IsAuthMode}"
+                                        Spacing="12">
+                                <TextBlock Text="YouTube Music Auth"
+                                           FontSize="16" FontWeight="Bold" Foreground="#FFFFFF" />
+                                <TextBlock Text="{Binding AuthStatusText}"
+                                           FontSize="12" Foreground="#A78BFA" FontWeight="SemiBold" />
+                                <TextBlock Text="Paste request headers from a logged-in music.youtube.com session:"
+                                           Foreground="#88888A" FontSize="11" TextWrapping="Wrap" />
+                                <TextBox Text="{Binding RawAuthHeaders}"
+                                         Height="100" AcceptsReturn="True" FontSize="10" TextWrapping="NoWrap"
+                                         Background="#1A1A1C" Foreground="#E8E8E8" BorderBrush="#2A2A2C"
+                                         Watermark="Paste headers here (JSON or raw HTTP format)..." />
+                                <TextBlock Text="{Binding AuthError}"
+                                           Foreground="Tomato" FontSize="11"
+                                           IsVisible="{Binding AuthError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                <TextBlock Text="How to: 1) Open music.youtube.com → F12 → Network → find /browse POST → right-click → Copy → Copy as cURL. 2) Paste the entire cURL output here. 3) The parser extracts Authorization and Cookie headers automatically. If using JSON export, make sure Cookie header is included (in Chrome Network tab click Cookies, or use Copy as cURL)."
+                                           Foreground="#666668" FontSize="10" TextWrapping="Wrap" />
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Content="Save" Command="{Binding SaveAuthHeadersCommand}"
+                                            Background="#1A1A1C" BorderBrush="#2A2A2C" BorderThickness="1"
+                                            Foreground="#E8E8E8" Padding="12,6" FontSize="13" />
+                                    <Button Content="Clear" Command="{Binding ClearAuthCommand}"
+                                            Background="#1A1A1C" BorderBrush="#2A2A2C" BorderThickness="1"
+                                            Foreground="#88888A" Padding="12,6" FontSize="13" />
+                                </StackPanel>
+                                <Button Content="Back" Background="Transparent" BorderThickness="0"
+                                        Foreground="#88888A" Padding="0" HorizontalAlignment="Left"
+                                        Click="CloseAuthMode" />
+                            </StackPanel>
+
                             <!-- Command palette -->
                             <ListBox x:Name="CommandListBox"
                                      Grid.Row="1"
@@ -185,7 +217,7 @@
                                      SelectedIndex="{Binding ModalSelectedIndex, Mode=TwoWay}"
                                      Background="Transparent"
                                      BorderThickness="0"
-                                     IsVisible="{Binding IsCommandMode}">
+                                     IsVisible="{Binding IsCommandsVisible}">
                                 <ListBox.Styles>
                                     <Style Selector="ListBoxItem">
                                         <Setter Property="Padding" Value="8,6" />
@@ -232,7 +264,7 @@
                                      SelectedIndex="{Binding ModalSelectedIndex, Mode=TwoWay}"
                                      Background="Transparent"
                                      BorderThickness="0"
-                                     IsVisible="{Binding !IsCommandMode}">
+                                     IsVisible="{Binding IsResultsVisible}">
                                 <ListBox.Styles>
                                     <Style Selector="ListBoxItem">
                                         <Setter Property="Padding" Value="8,6" />
@@ -642,7 +674,7 @@
                 Width="300"
                 IsVisible="{Binding DataContext.IsQueueVisible, RelativeSource={RelativeSource AncestorType=Window}}"
                 DataContext="{Binding Queue}">
-            <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*">
                 <TextBlock Text="Queue"
                            FontSize="18"
                            FontWeight="Bold"
@@ -775,6 +807,56 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+                </StackPanel>
+
+                <!-- Auth section -->
+                <StackPanel Grid.Row="4"
+                            Margin="0,16,0,0"
+                            Spacing="8"
+                            DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}"
+                            IsVisible="{Binding IsAuthSectionVisible}">
+                    <TextBlock Text="Auth"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               Foreground="#A78BFA" />
+                    <TextBlock Text="{Binding AuthStatusText}"
+                               FontSize="11"
+                               Foreground="#88888A" />
+                    <TextBox Text="{Binding RawAuthHeaders}"
+                             Watermark="Paste request headers..."
+                             Height="60"
+                             AcceptsReturn="True"
+                             FontSize="10"
+                             Background="#1A1A1C"
+                             Foreground="#E8E8E8"
+                             BorderBrush="#2A2A2C" />
+                    <TextBlock Text="{Binding AuthError}"
+                               Foreground="Tomato"
+                               FontSize="10"
+                               IsVisible="{Binding AuthError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    <TextBlock Text="How to: Open music.youtube.com → DevTools → Network → find /browse request → Copy request headers → Paste above"
+                               Foreground="#666668"
+                               FontSize="10"
+                               TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="8">
+                        <Button Content="Save"
+                                Command="{Binding SaveAuthHeadersCommand}"
+                                Background="#1A1A1C"
+                                BorderBrush="#2A2A2C"
+                                BorderThickness="1"
+                                Foreground="#E8E8E8"
+                                Padding="8,4"
+                                FontSize="12" />
+                        <Button Content="Clear"
+                                Command="{Binding ClearAuthCommand}"
+                                Background="#1A1A1C"
+                                BorderBrush="#2A2A2C"
+                                BorderThickness="1"
+                                Foreground="#88888A"
+                                Padding="8,4"
+                                FontSize="12" />
+                    </StackPanel>
                 </StackPanel>
             </Grid>
         </Border>
@@ -984,6 +1066,13 @@
                                        FontSize="10"
                                        IsVisible="{Binding DataContext.Queue.IsRadioActive, RelativeSource={RelativeSource AncestorType=Window}}" />
                         </Grid>
+                    </Button>
+                    <Button Classes="player-btn"
+                            Command="{Binding DataContext.ToggleAuthSectionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                            ToolTip.Tip="Auth settings">
+                        <TextBlock Text="Auth"
+                                   FontSize="10"
+                                   Foreground="#88888A" />
                     </Button>
                     <Path Data="{StaticResource IconVolume}"
                           Fill="#666668"

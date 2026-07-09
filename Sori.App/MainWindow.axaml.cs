@@ -215,4 +215,12 @@ public partial class MainWindow : Window
 
         return false;
     }
+
+    private void CloseAuthMode(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel vm)
+        {
+            vm.Search.IsAuthMode = false;
+        }
+    }
 }

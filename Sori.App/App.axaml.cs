@@ -31,7 +31,8 @@ public class App : Application
 
             var innerTubeOptions = new InnerTubeOptions();
             var httpClient = new HttpClient();
-            var innerTubeClient = new InnerTubeClient(httpClient, innerTubeOptions);
+            IYouTubeMusicAuthStore authStore = new DpapiYouTubeMusicAuthStore();
+            var innerTubeClient = new InnerTubeClient(httpClient, innerTubeOptions, authStore);
             var contextFactory = new InnerTubeContextFactory(innerTubeOptions);
 
             ISearchService searchService;
@@ -91,6 +92,7 @@ public class App : Application
                 collectionService,
                 homeService,
                 upNextService,
+                authStore,
                 playbackCoordinator,
                 prefetchResolver);
             desktop.MainWindow = new MainWindow { DataContext = viewModel };

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using App.Enums;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using InnerTube.Auth;
 using Sori.Core.Enums;
 using Sori.Core.Interfaces;
 using Sori.Core.Models;
@@ -19,6 +20,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly IPrefetchingPlaybackResolver? _prefetchResolver;
     private readonly ICollectionService _collectionService;
     private readonly IUpNextService _upNextService;
+    private readonly IYouTubeMusicAuthStore _authStore;
 
     [ObservableProperty] private MainContentView currentView = MainContentView.Home;
 
@@ -30,12 +32,19 @@ public partial class MainWindowViewModel : ObservableObject
 
     [ObservableProperty] private Song? currentSong;
 
+    // Auth properties
+    [ObservableProperty] private string rawAuthHeaders = "";
+    [ObservableProperty] private string authStatusText = "Not signed in";
+    [ObservableProperty] private string? authError;
+    [ObservableProperty] private bool isAuthSectionVisible;
+
     public MainWindowViewModel(
         ISearchService searchService,
         IQueueService queueService,
         ICollectionService collectionService,
         IHomeService homeService,
         IUpNextService upNextService,
+        IYouTubeMusicAuthStore authStore,
         IPlaybackCoordinator playbackCoordinator,
         IPrefetchingPlaybackResolver? prefetchResolver = null)
     {
@@ -44,10 +53,11 @@ public partial class MainWindowViewModel : ObservableObject
         _prefetchResolver = prefetchResolver;
         _collectionService = collectionService;
         _upNextService = upNextService;
+        _authStore = authStore;
 
         Player = new PlayerBarViewModel(playbackCoordinator, queueService);
         Queue = new QueueViewModel(queueService);
-        Search = new SearchViewModel(searchService);
+        Search = new SearchViewModel(searchService, authStore);
         Home = new HomeViewModel(homeService);
 
         WireSearchEvents();
@@ -64,6 +74,13 @@ public partial class MainWindowViewModel : ObservableObject
         PlayCollectionTrackCommand = new AsyncRelayCommand<Song>(PlayCollectionTrackAsync);
         AddNextCommand = new RelayCommand<Song>(AddNext);
         AddToQueueEndCommand = new RelayCommand<Song>(AddToQueueEnd);
+
+        // Auth commands
+        SaveAuthHeadersCommand = new AsyncRelayCommand(SaveAuthHeadersAsync);
+        ClearAuthCommand = new AsyncRelayCommand(ClearAuthAsync);
+        ToggleAuthSectionCommand = new RelayCommand(() => IsAuthSectionVisible = !IsAuthSectionVisible);
+
+        _ = CheckAuthStatusAsync();
     }
 
     public PlayerBarViewModel Player { get; }
@@ -90,6 +107,11 @@ public partial class MainWindowViewModel : ObservableObject
     public IAsyncRelayCommand<Song> PlayCollectionTrackCommand { get; }
     public IRelayCommand<Song> AddNextCommand { get; }
     public IRelayCommand<Song> AddToQueueEndCommand { get; }
+
+    // Auth commands
+    public IAsyncRelayCommand SaveAuthHeadersCommand { get; }
+    public IAsyncRelayCommand ClearAuthCommand { get; }
+    public IRelayCommand ToggleAuthSectionCommand { get; }
 
     partial void OnCurrentViewChanged(MainContentView value)
     {
@@ -451,5 +473,37 @@ public partial class MainWindowViewModel : ObservableObject
                 await OpenPlaylistAsync(item.Playlist);
                 break;
         }
+    }
+
+    // Auth methods
+
+    private async Task SaveAuthHeadersAsync()
+    {
+        try
+        {
+            AuthError = null;
+            var credentials = BrowserHeadersParser.Parse(RawAuthHeaders);
+            await _authStore.SaveAsync(credentials);
+            RawAuthHeaders = "";
+            AuthStatusText = "Signed in";
+        }
+        catch (Exception ex)
+        {
+            AuthError = ex.Message;
+        }
+    }
+
+    private async Task ClearAuthAsync()
+    {
+        await _authStore.ClearAsync();
+        AuthStatusText = "Not signed in";
+    }
+
+    private async Task CheckAuthStatusAsync()
+    {
+        var credentials = await _authStore.LoadAsync();
+        AuthStatusText = credentials is not null && credentials.IsValid
+            ? "Signed in"
+            : "Not signed in";
     }
 }

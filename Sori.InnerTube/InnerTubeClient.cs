@@ -1,5 +1,6 @@
 ﻿using System.Net.Http.Json;
 using System.Text.Json;
+using Sori.Core.Interfaces;
 
 namespace InnerTube;
 
@@ -7,57 +8,63 @@ public sealed class InnerTubeClient
 {
     private readonly HttpClient _httpClient;
     private readonly InnerTubeOptions _options;
+    private readonly IYouTubeMusicAuthStore? _authStore;
 
-    public InnerTubeClient(HttpClient httpClient, InnerTubeOptions options)
+    public InnerTubeClient(
+        HttpClient httpClient,
+        InnerTubeOptions options,
+        IYouTubeMusicAuthStore? authStore = null)
     {
         _httpClient = httpClient;
         _options = options;
+        _authStore = authStore;
     }
 
     public async Task<JsonDocument> PostAsync(
-        string endpoint,
-        object body,
+        string endpoint, object body,
         CancellationToken cancellationToken = default)
     {
-        var url = BuildUrl(endpoint);
-
-        using var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Headers.TryAddWithoutValidation("Accept", "*/*");
-        request.Headers.TryAddWithoutValidation("Origin", _options.Origin);
-        request.Headers.TryAddWithoutValidation("Referer", _options.Referer);
-        request.Headers.TryAddWithoutValidation("User-Agent", _options.UserAgent);
-        request.Headers.TryAddWithoutValidation("X-Youtube-Client-Name", "67");
-        request.Headers.TryAddWithoutValidation("X-Youtube-Client-Version", _options.ClientVersion);
-        request.Headers.TryAddWithoutValidation("X-Goog-Api-Format-Version", "2");
-
-        if (!string.IsNullOrWhiteSpace(_options.VisitorData))
-            request.Headers.TryAddWithoutValidation("X-Goog-Visitor-Id", _options.VisitorData);
-
-        request.Content = JsonContent.Create(body);
-
-        using var response = await _httpClient.SendAsync(
-            request,
-            HttpCompletionOption.ResponseHeadersRead,
-            cancellationToken);
-
-        var responseText = await response.Content.ReadAsStringAsync(cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
-            throw new HttpRequestException(
-                $"InnerTube request failed: {(int)response.StatusCode} {response.ReasonPhrase}. Body: {responseText}");
-
-        return JsonDocument.Parse(responseText);
+        return await PostAsync(endpoint, body, null, cancellationToken);
     }
 
     public async Task<JsonDocument> PostAsync(
-        string endpoint,
-        object body,
-        string additionalQuery,
+        string endpoint, object body, string? additionalQuery,
         CancellationToken cancellationToken = default)
     {
         var url = BuildUrl(endpoint, additionalQuery);
-
         using var request = new HttpRequestMessage(HttpMethod.Post, url);
+        AddBaseHeaders(request);
+
+        // Auth headers
+        if (_authStore is not null)
+        {
+            var credentials = await _authStore.LoadAsync(cancellationToken);
+            if (credentials is not null && credentials.IsValid)
+            {
+                // ponytail: never log these headers — add redacted logging if needed later
+                request.Headers.TryAddWithoutValidation("Authorization", credentials.Authorization);
+                request.Headers.TryAddWithoutValidation("Cookie", credentials.Cookie);
+                request.Headers.TryAddWithoutValidation("X-Goog-AuthUser", credentials.XGoogAuthUser);
+                request.Headers.TryAddWithoutValidation("x-origin", credentials.XOrigin);
+            }
+        }
+
+        request.Content = JsonContent.Create(body);
+
+        using var response = await _httpClient.SendAsync(
+            request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+
+        var responseText = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+            throw new HttpRequestException(
+                $"InnerTube request failed: {(int)response.StatusCode} {response.ReasonPhrase}. Body: {responseText}");
+
+        return JsonDocument.Parse(responseText);
+    }
+
+    private void AddBaseHeaders(HttpRequestMessage request)
+    {
         request.Headers.TryAddWithoutValidation("Accept", "*/*");
         request.Headers.TryAddWithoutValidation("Origin", _options.Origin);
         request.Headers.TryAddWithoutValidation("Referer", _options.Referer);
@@ -68,37 +75,18 @@ public sealed class InnerTubeClient
 
         if (!string.IsNullOrWhiteSpace(_options.VisitorData))
             request.Headers.TryAddWithoutValidation("X-Goog-Visitor-Id", _options.VisitorData);
-
-        request.Content = JsonContent.Create(body);
-
-        using var response = await _httpClient.SendAsync(
-            request,
-            HttpCompletionOption.ResponseHeadersRead,
-            cancellationToken);
-
-        var responseText = await response.Content.ReadAsStringAsync(cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
-            throw new HttpRequestException(
-                $"InnerTube request failed: {(int)response.StatusCode} {response.ReasonPhrase}. Body: {responseText}");
-
-        return JsonDocument.Parse(responseText);
     }
 
     private string BuildUrl(string endpoint, string? additionalQuery = null)
     {
-        var url =
-            $"{_options.BaseUrl.TrimEnd('/')}/youtubei/v1/{endpoint.TrimStart('/')}?prettyPrint=false";
-
-        if (!string.IsNullOrWhiteSpace(_options.ApiKey)) url += $"&key={Uri.EscapeDataString(_options.ApiKey)}";
-
+        var url = $"{_options.BaseUrl.TrimEnd('/')}/youtubei/v1/{endpoint.TrimStart('/')}?prettyPrint=false";
+        if (!string.IsNullOrWhiteSpace(_options.ApiKey))
+            url += $"&key={Uri.EscapeDataString(_options.ApiKey)}";
         if (!string.IsNullOrWhiteSpace(additionalQuery))
         {
-            if (!additionalQuery.StartsWith("&"))
-                url += "&";
+            if (!additionalQuery.StartsWith("&")) url += "&";
             url += additionalQuery.TrimStart('&');
         }
-
         return url;
     }
 }

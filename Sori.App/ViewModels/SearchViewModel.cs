@@ -15,6 +15,7 @@ namespace App.ViewModels;
 public partial class SearchViewModel : ObservableObject
 {
     private readonly ISearchService _searchService;
+    private readonly IYouTubeMusicAuthStore? _authStore;
     private SearchFilter _currentFilter = SearchFilter.All;
 
     [ObservableProperty] private string? searchError;
@@ -30,6 +31,17 @@ public partial class SearchViewModel : ObservableObject
     [ObservableProperty] private int modalSelectedIndex = -1;
 
     [ObservableProperty] private bool isAddingToQueue;
+
+    // Auth mode
+    [ObservableProperty] private bool isAuthMode;
+    [ObservableProperty] private string rawAuthHeaders = "";
+    [ObservableProperty] private string authStatusText = "Not signed in";
+    [ObservableProperty] private string? authError;
+
+    public IAsyncRelayCommand SaveAuthHeadersCommand { get; }
+    public IAsyncRelayCommand ClearAuthCommand { get; }
+
+    public bool IsAuthAvailable => _authStore is not null;
 
     public string SearchingText => _currentFilter == SearchFilter.All
         ? "Searching..."
@@ -54,18 +66,24 @@ public partial class SearchViewModel : ObservableObject
         }
     }
 
-    public SearchViewModel(ISearchService searchService)
+    public SearchViewModel(ISearchService searchService, IYouTubeMusicAuthStore? authStore = null)
     {
         _searchService = searchService;
+        _authStore = authStore;
 
         SearchCommand = new AsyncRelayCommand(SearchAsync);
         ExecuteCommandCommand = new RelayCommand(ExecuteCommand);
+        SaveAuthHeadersCommand = new AsyncRelayCommand(SaveAuthHeadersAsync);
+        ClearAuthCommand = new AsyncRelayCommand(ClearAuthAsync);
 
         SearchSongs = new ObservableCollection<Song>();
         SearchAlbums = new ObservableCollection<Album>();
         SearchArtists = new ObservableCollection<Artist>();
         SearchPlaylists = new ObservableCollection<Playlist>();
         ModalItems = new ObservableCollection<HomeItem>();
+
+        if (_authStore is not null)
+            _ = CheckAuthStatusAsync();
     }
 
     public ObservableCollection<Song> SearchSongs { get; }
@@ -107,10 +125,20 @@ public partial class SearchViewModel : ObservableObject
         new("playlist", "Search playlists — >playlist query", "> playlist black parade")
     };
 
+    // Add auth command only if store is available
+    private List<CommandItem> GetAllCommands()
+    {
+        var cmds = new List<CommandItem>(AllCommands);
+        if (_authStore is not null)
+            cmds.Add(new("auth", "Sign in with browser session", "> auth"));
+        return cmds;
+    }
+
     partial void OnSearchQueryChanged(string value)
     {
         IsCommandMode = value.StartsWith(">");
         CommandQuery = IsCommandMode ? value[1..].TrimStart() : "";
+        IsAuthMode = false;
 
         if (IsCommandMode)
         {
@@ -121,6 +149,20 @@ public partial class SearchViewModel : ObservableObject
             _currentFilter = SearchFilter.All;
         }
         OnPropertyChanged(nameof(CommandHintText));
+        OnPropertyChanged(nameof(IsResultsVisible));
+        OnPropertyChanged(nameof(IsCommandsVisible));
+    }
+
+    partial void OnIsAuthModeChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsResultsVisible));
+        OnPropertyChanged(nameof(IsCommandsVisible));
+    }
+
+    partial void OnIsCommandModeChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsResultsVisible));
+        OnPropertyChanged(nameof(IsCommandsVisible));
     }
 
     private void FilterCommands()
@@ -129,9 +171,10 @@ public partial class SearchViewModel : ObservableObject
 
         var query = CommandQuery.Trim().ToLowerInvariant();
 
+        var allCommands = GetAllCommands();
         var filtered = string.IsNullOrEmpty(query)
-            ? AllCommands
-            : AllCommands.Where(c => c.Name.Contains(query) || c.Description.ToLowerInvariant().Contains(query));
+            ? allCommands
+            : allCommands.Where(c => c.Name.Contains(query) || c.Description.ToLowerInvariant().Contains(query));
 
         foreach (var cmd in filtered)
         {
@@ -320,6 +363,13 @@ public partial class SearchViewModel : ObservableObject
                 _currentFilter = SearchFilter.Playlists;
                 _ = SearchAsync();
                 break;
+            case "auth":
+                if (_authStore is null) return;
+                IsCommandMode = false;
+                IsAuthMode = true;
+                SearchQuery = "";
+                _ = CheckAuthStatusAsync();
+                break;
         }
     }
 
@@ -339,6 +389,9 @@ public partial class SearchViewModel : ObservableObject
 
     public bool IsSearching => SearchState == SearchState.Loading;
 
+    public bool IsResultsVisible => !IsCommandMode && !IsAuthMode;
+    public bool IsCommandsVisible => IsCommandMode && !IsAuthMode;
+
     private void NotifySearchSectionChanges()
     {
         OnPropertyChanged(nameof(HasSongs));
@@ -353,6 +406,42 @@ public partial class SearchViewModel : ObservableObject
     public bool HasAlbums => SearchAlbums.Count > 0;
     public bool HasArtists => SearchArtists.Count > 0;
     public bool HasPlaylists => SearchPlaylists.Count > 0;
+
+    private async Task SaveAuthHeadersAsync()
+    {
+        if (_authStore is null) return;
+        try
+        {
+            AuthError = null;
+            var credentials = InnerTube.Auth.BrowserHeadersParser.Parse(RawAuthHeaders);
+            await _authStore.SaveAsync(credentials);
+            RawAuthHeaders = "";
+            AuthStatusText = "Signed in";
+            IsAuthMode = false;
+        }
+        catch (Exception ex)
+        {
+            AuthError = ex.Message;
+        }
+    }
+
+    private async Task ClearAuthAsync()
+    {
+        if (_authStore is null) return;
+        await _authStore.ClearAsync();
+        AuthStatusText = "Not signed in";
+        RawAuthHeaders = "";
+        AuthError = null;
+    }
+
+    private async Task CheckAuthStatusAsync()
+    {
+        if (_authStore is null) return;
+        var credentials = await _authStore.LoadAsync();
+        AuthStatusText = credentials is not null && credentials.IsValid
+            ? "Signed in"
+            : "Not signed in";
+    }
 }
 
 public sealed class CommandItem
